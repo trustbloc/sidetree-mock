@@ -3,6 +3,7 @@
 
 [![Build Status](https://travis-ci.com/trustbloc/sidetree-node.svg?branch=master)](https://travis-ci.com/trustbloc/sidetree-node)
 [![GolangCI](https://golangci.com/badges/github.com/trustbloc/sidetree-node.svg)](https://golangci.com/r/github.com/trustbloc/sidetree-node)
+[![codecov](https://codecov.io/gh/trustbloc/sidetree-node/branch/master/graph/badge.svg)](https://codecov.io/gh/trustbloc/sidetree-node)
 [![Go Report Card](https://goreportcard.com/badge/github.com/trustbloc/sidetree-node?style=flat-square)](https://goreportcard.com/report/github.com/trustbloc/sidetree-node)
 [![codebeat badge](https://codebeat.co/badges/d549a1a4-372c-416b-ae56-7b6e395b3a56)](https://codebeat.co/projects/github-com-trustbloc-sidetree-node-master)
 
