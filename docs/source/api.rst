@@ -5,33 +5,6 @@ Sidetree node exposes a set of REST API that enables the creation of new DIDs an
 resolutions. API uses design first approach to generate a server stub for API using `go swagger <https://github.com/go-swagger/go-swagger>`_.
 The API structure is defined in swagger.yaml.
 
-**Sidetree Request Handler**
-
-Sidetree-node Request handler implements sidetree node context. Request Handler act as the entry point for client request which perform common validation
-for any operation request. Each request is validated against the following ::
-
- 1. Length of request is greater than MaxOperationByteSize of the request protocol
- 2. For operation create, request cannot have didID before its being created
- 3. For operation create, validate generic original document schema
- 4. For non create operation validate if didUniqueSuffix exists in operation store
-
-For operation type Create, Sidetree DID document is created and returns the original document with DID added to it.
-For any other operation, handler doesnt do anything. Returns 200 Status on successful response.
-
-Sidetree Node Context contains the following:
- - protocol information client
- - content addressable storage client (CAS Client)
- - blockchain client
- - operations store client
-
-**Operation Processor**
-
-OperationProcessor is an interface which resolves the DID document based on the DID
-
-**BatchWriter**
-
-BatchWriter is an interface to add an operation to the Batch
-
 Sidetree REST API
 -----------------
 
