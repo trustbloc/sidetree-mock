@@ -1,0 +1,4 @@
+ignore:
+  - "cmd/sidetree-server"  # ignore folders and all its contents
+  - "models"
+  - "restapi/.*"
