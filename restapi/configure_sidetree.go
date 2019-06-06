@@ -4,20 +4,65 @@ package restapi
 
 import (
 	"crypto/tls"
-	"io"
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
-	errors "github.com/go-openapi/errors"
-	runtime "github.com/go-openapi/runtime"
-	middleware "github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/runtime/middleware"
 
+	"github.com/go-openapi/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+
+	"github.com/trustbloc/sidetree-core-go/pkg/batch"
+	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
+	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
+	"github.com/trustbloc/sidetree-core-go/pkg/processor"
+
+	"github.com/go-openapi/runtime"
+	"github.com/trustbloc/sidetree-node/pkg/context"
+	"github.com/trustbloc/sidetree-node/pkg/requesthandler"
 	"github.com/trustbloc/sidetree-node/restapi/operations"
 )
 
 //go:generate swagger generate server --target ../../sidetree-node --name Sidetree --spec ../api/swagger.yaml
 
-func configureFlags(api *operations.SidetreeAPI) {
-	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
+var logger = logrus.New()
+var config = viper.New()
+
+const didDocNamespace = "did:sidetree:"
+
+func configureFlags(api *operations.SidetreeAPI) { //nolint:unparam
+
+	// Set command line options from environment variables if available
+	args := []string{
+		"scheme",
+		"cleanup-timeout",
+		"graceful-timeout",
+		"max-header-size",
+		"socket-path",
+		"host",
+		"port",
+		"listen-limit",
+		"keep-alive",
+		"read-timeout",
+		"write-timeout",
+		"tls-host",
+		"tls-port",
+		"tls-certificate",
+		"tls-key",
+		"tls-ca",
+		"tls-listen-limit",
+		"tls-keep-alive",
+		"tls-read-timeout",
+		"tls-write-timeout",
+	}
+	for _, a := range args {
+		if envVar := os.Getenv(fmt.Sprintf("SIDETREE_NODE_%s", strings.Replace(strings.ToUpper(a), "-", "_", -1))); envVar != "" {
+			os.Args = append(os.Args, fmt.Sprintf("--%s=%s", a, envVar))
+		}
+	}
 }
 
 func configureAPI(api *operations.SidetreeAPI) http.Handler {
@@ -31,18 +76,52 @@ func configureAPI(api *operations.SidetreeAPI) http.Handler {
 	// api.Logger = log.Printf
 
 	api.JSONConsumer = runtime.JSONConsumer()
-
-	api.ApplicationJoseProducer = runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
-		return errors.NotImplemented("applicationJose producer has not yet been implemented")
-	})
 	api.JSONProducer = runtime.JSONProducer()
 
-	api.GetDocumentDidOrDidDocumentHandler = operations.GetDocumentDidOrDidDocumentHandlerFunc(func(params operations.GetDocumentDidOrDidDocumentParams) middleware.Responder {
-		return middleware.NotImplemented("operation .GetDocumentDidOrDidDocument has not yet been implemented")
-	})
-	api.PostDocumentHandler = operations.PostDocumentHandlerFunc(func(params operations.PostDocumentParams) middleware.Responder {
-		return middleware.NotImplemented("operation .PostDocument has not yet been implemented")
-	})
+	config.SetEnvPrefix("SIDETREE_NODE")
+	config.AutomaticEnv()
+	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	logger.Info("starting sidetree node...")
+
+	ctx, err := context.New(config)
+	if err != nil {
+		logger.Errorf("Failed to create new context: %s", err.Error())
+		http.Error(nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	// create new batch writer
+	batchWriter, err := batch.New(ctx)
+	if err != nil {
+		logger.Errorf("Failed to create batch writer: %s", err.Error())
+		http.Error(nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	// start routine for creating batches
+	batchWriter.Start()
+
+	// did document handler with did document validator for didDocNamespace
+	didDocHandler := dochandler.New(
+		didDocNamespace,
+		ctx.Protocol(),
+		didvalidator.New(ctx.OperationStore()),
+		batchWriter,
+		processor.New(ctx.OperationStore()),
+	)
+
+	didResolutionHandler := requesthandler.NewResolutionHandler(didDocNamespace, ctx.Protocol(), didDocHandler)
+	didOperationHandler := requesthandler.NewOperationHandler(didDocNamespace, ctx.Protocol(), didDocHandler)
+
+	api.PostDocumentHandler = operations.PostDocumentHandlerFunc(
+		func(params operations.PostDocumentParams) middleware.Responder {
+			return didOperationHandler.HandleOperationRequest(params.Request)
+		},
+	)
+	api.GetDocumentDidOrDidDocumentHandler = operations.GetDocumentDidOrDidDocumentHandlerFunc(
+		func(params operations.GetDocumentDidOrDidDocumentParams) middleware.Responder {
+			return didResolutionHandler.HandleResolveRequest(params.DidOrDidDocument)
+		},
+	)
 
 	api.ServerShutdown = func() {}
 
