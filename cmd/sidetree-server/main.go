@@ -28,7 +28,7 @@ func main() {
 
 	parser := flags.NewParser(server, flags.Default)
 	parser.ShortDescription = "Sidetree API"
-	parser.LongDescription = "SecureKey SideTree Node"
+	parser.LongDescription = "Sidetree Node"
 
 	server.ConfigureFlags()
 	for _, optsGroup := range api.CommandLineOptionsGroups {

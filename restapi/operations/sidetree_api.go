@@ -50,7 +50,7 @@ func NewSidetreeAPI(spec *loads.Document) *SidetreeAPI {
 	}
 }
 
-/*SidetreeAPI SecureKey SideTree Node */
+/*SidetreeAPI Sidetree Node */
 type SidetreeAPI struct {
 	spec            *loads.Document
 	context         *middleware.Context

@@ -2,7 +2,7 @@
 
 /*
 Package restapi Sidetree API
-SecureKey SideTree Node
+Sidetree Node
 
 
     Schemes:
