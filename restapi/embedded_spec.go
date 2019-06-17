@@ -30,7 +30,7 @@ func init() {
   ],
   "swagger": "2.0",
   "info": {
-    "description": "SecureKey SideTree Node",
+    "description": "Sidetree Node",
     "title": "Sidetree API",
     "version": "0.1.0"
   },
@@ -203,7 +203,7 @@ func init() {
   ],
   "swagger": "2.0",
   "info": {
-    "description": "SecureKey SideTree Node",
+    "description": "Sidetree Node",
     "title": "Sidetree API",
     "version": "0.1.0"
   },
