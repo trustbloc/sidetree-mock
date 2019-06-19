@@ -7,12 +7,32 @@
 #
 # Supported Targets:
 #
-#   all (default) : runs code checks, unit and integration tests
-#   checks: runs code checks (license, lint)
-#   unit-test: runs unit tests
-#   generate: generates Go Swagger artifacts
+#   all:                 runs code checks, unit and integration tests
+#   checks:              runs code checks (license, lint)
+#   unit-test:           runs unit tests
+#   generate:            generates Go Swagger artifacts
+#   bddtests:            run bddtests
+#   generate-test-keys:  generate tls test keys
+#
 
-GO_CMD ?= go
+
+# Local variables used by makefile
+CONTAINER_IDS      = $(shell docker ps -a -q)
+DEV_IMAGES         = $(shell docker images dev-* -q)
+ARCH               = $(shell go env GOARCH)
+GO_VER             = $(shell grep "GO_VER" .ci-properties |cut -d'=' -f2-)
+
+# Namespace for the sidetree node
+DOCKER_OUTPUT_NS          ?= trustbloc
+SIDETREE_NODE_IMAGE_NAME  ?= sidetree-node
+
+
+# Tool commands (overridable)
+DOCKER_CMD ?= docker
+GO_CMD     ?= go
+ALPINE_VER ?= 3.9
+GO_TAGS    ?=
+
 export GO111MODULE=on
 
 checks: generate license lint
@@ -23,16 +43,48 @@ license:
 lint:
 	@scripts/check_lint.sh
 
-generate: clean
+generate: clean-generate-files
 		@scripts/generate.sh
 
 unit-test:
 	@scripts/unit.sh
 
-all: clean checks unit-test
+all: clean checks unit-test bddtests
 
-clean:
-	rm -Rf ./build
+sidetree:
+	@echo "Building sidetree"
+	@mkdir -p ./.build/bin
+	@go build -o ./.build/bin/sidetree-node cmd/sidetree-server/main.go
+
+sidetree-docker: sidetree
+	@docker build -f ./images/sidetree-node/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(SIDETREE_NODE_IMAGE_NAME):latest \
+	--build-arg GO_VER=$(GO_VER) \
+	--build-arg ALPINE_VER=$(ALPINE_VER) \
+	--build-arg GO_TAGS=$(GO_TAGS) \
+	--build-arg GOPROXY=$(GOPROXY) .
+
+clean-images:
+	@echo "Stopping all containers, pruning containers and images, deleting dev images"
+ifneq ($(strip $(CONTAINER_IDS)),)
+	@docker stop $(CONTAINER_IDS)
+endif
+	@docker system prune -f
+ifneq ($(strip $(DEV_IMAGES)),)
+	@docker rmi $(DEV_IMAGES) -f
+endif
+
+
+generate-test-keys: clean
+	@mkdir -p -p test/bddtests/fixtures/keys/tls
+	@docker run -i --rm \
+		-v $(abspath .):/opt/go/src/github.com/trustbloc/sidetree-node \
+		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-node/scripts/generate_test_keys.sh" \
+		frapsoft/openssl
+
+bddtests: clean clean-generate-files checks generate-test-keys sidetree-docker
+	@scripts/integration.sh
+
+clean-generate-files:
 	rm -Rf ./cmd/
 	rm -Rf ./models/
 	rm -Rf ./restapi/operations/
@@ -40,7 +92,7 @@ clean:
 	rm -Rf ./restapi/embedded_spec.go
 	rm -Rf ./restapi/server.go
 
-
-
-
-
+clean:
+	rm -Rf ./.build
+	rm -Rf ./test/bddtests/docker-compose.log
+	rm -Rf ./test/bddtests/fixtures/keys/tls

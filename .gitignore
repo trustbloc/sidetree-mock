@@ -22,3 +22,9 @@ swagger
 
 docs/build
 git log
+
+docker-compose.log
+
+.build
+
+test/bddtests/fixtures/keys/tls
