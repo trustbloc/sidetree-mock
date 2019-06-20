@@ -76,6 +76,7 @@ func configureAPI(api *operations.SidetreeAPI) http.Handler {
 	// api.Logger = log.Printf
 
 	api.JSONConsumer = runtime.JSONConsumer()
+	api.ApplicationJoseProducer = runtime.JSONProducer()
 	api.JSONProducer = runtime.JSONProducer()
 
 	config.SetEnvPrefix("SIDETREE_NODE")
