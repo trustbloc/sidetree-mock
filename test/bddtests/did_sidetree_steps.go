@@ -74,11 +74,6 @@ func (d *DIDSideSteps) checkErrorResp(errorMsg string) error {
 
 func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 	if d.resp.ErrorMsg != "" {
-		documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
-		if err != nil {
-			return err
-		}
-		panic(documentHash)
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
 
