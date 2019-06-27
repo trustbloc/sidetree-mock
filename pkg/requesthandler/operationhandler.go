@@ -69,15 +69,19 @@ func (r *OperationHandler) getOperation(request *models.Request) (batch.Operatio
 		Type:                         getOperationType(request.Header.Operation),
 		HashAlgorithmInMultiHashCode: r.protocol.Current().HashAlgorithmInMultiHashCode,
 	}
-	uniqueSuffix, err := docutil.GetOperationHash(operation)
-	if err != nil {
-		return batch.Operation{}, err
-	}
-	operation.UniqueSuffix = uniqueSuffix
 
 	switch operation.Type {
 	case batch.OperationTypeCreate:
+
+		uniqueSuffix, err := docutil.GetOperationHash(operation)
+		if err != nil {
+			return batch.Operation{}, err
+		}
+		operation.UniqueSuffix = uniqueSuffix
+		operation.ID = r.namespace + uniqueSuffix
+
 		operation.OperationNumber = 0
+
 	case batch.OperationTypeUpdate:
 		decodedPayload, err := getDecodedPayload(swag.StringValue(request.Payload))
 		if err != nil {
