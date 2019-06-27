@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0
 	github.com/stretchr/testify v1.3.0
-	github.com/trustbloc/sidetree-core-go v0.0.0-20190531160340-1ce667055015
+	github.com/trustbloc/sidetree-core-go v0.0.0-20190627181621-b296187670c6
 	github.com/trustbloc/sidetree-node v0.0.0
 
 )
