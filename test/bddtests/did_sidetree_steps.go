@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 
@@ -135,6 +136,12 @@ func encodeDidDocument(didDocumentPath, didID string) string {
 	return base64.URLEncoding.EncodeToString(bytes)
 }
 
+func wait(seconds int) error {
+	logger.Infof("Waiting [%d] seconds\n", seconds)
+	time.Sleep(time.Duration(seconds) * time.Second)
+	return nil
+}
+
 // RegisterSteps registers did sidetree steps
 func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to create DID document "([^"]*)" as "([^"]*)" with DID id "([^"]*)"$`, d.sendDIDDocumentWithID)
@@ -142,5 +149,6 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to create DID document "([^"]*)" as "([^"]*)"`, d.sendDIDDocument)
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessResp)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
+	s.Step(`^we wait (\d+) seconds$`, wait)
 
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
+	"github.com/trustbloc/sidetree-node/pkg/observer"
 
 	"github.com/go-openapi/runtime"
 	"github.com/trustbloc/sidetree-node/pkg/context"
@@ -100,6 +101,9 @@ func configureAPI(api *operations.SidetreeAPI) http.Handler {
 
 	// start routine for creating batches
 	batchWriter.Start()
+
+	// start observer
+	observer.Start(ctx.Blockchain(), ctx.CAS(), ctx.OperationStore())
 
 	// did document handler with did document validator for didDocNamespace
 	didDocHandler := dochandler.New(
