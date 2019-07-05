@@ -18,6 +18,6 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0
-	github.com/trustbloc/sidetree-core-go v0.0.0-20190627181621-b296187670c6
+	github.com/trustbloc/sidetree-core-go v0.0.0-20190704193342-317707b882f9
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 )

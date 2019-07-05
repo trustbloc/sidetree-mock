@@ -7,13 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package mocks
 
 import (
-	"encoding/json"
-
-	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
-	"github.com/trustbloc/sidetree-core-go/pkg/batch/filehandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
-
-	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,8 +16,7 @@ import (
 // writing of the batch file to CAS. In this case it adds operations directly into operation store.
 // This is a shortcut for running server in test mode (in the absence of observer component)
 type MockCasClient struct {
-	CAS      *mocks.MockCasClient
-	OpsStore *mocks.MockOperationStore // add as shortcut for running server in test mode
+	CAS *mocks.MockCasClient
 }
 
 // NewMockCasClient creates mock cas client;
@@ -42,47 +35,7 @@ func (m *MockCasClient) Write(content []byte) (string, error) {
 
 	log.Debugf("added content with address[%s]", address)
 
-	if m.OpsStore != nil {
-		// Server is running in 'test' mode
-		var bf filehandler.BatchFile
-		err = json.Unmarshal(content, &bf)
-		if err == nil {
-			// cas is storing batch file; store operations into operations processor
-			m.storeOperationsFromBatchFile(bf)
-		}
-	}
-
 	return address, nil
-}
-
-func (m *MockCasClient) storeOperationsFromBatchFile(batchFile filehandler.BatchFile) {
-	for _, encodedOp := range batchFile.Operations {
-		err := m.storeOperation(encodedOp)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-func (m *MockCasClient) storeOperation(encodedOp string) error {
-
-	opBytes, err := docutil.DecodeString(encodedOp)
-	if err != nil {
-		return err
-	}
-
-	op := batch.Operation{}
-	err = json.Unmarshal(opBytes, &op)
-	if err != nil {
-		log.Errorf("unmarshal operation failed: %s", err.Error())
-		return err
-	}
-
-	log.Debugf("adding operation for uniqueSuffix[%s] to the mock store", op.UniqueSuffix)
-	if err := m.OpsStore.Put(op); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Read reads the content of the given address in CAS.

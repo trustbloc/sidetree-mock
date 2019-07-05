@@ -20,6 +20,8 @@ Feature:
   Scenario: create valid did doc
     When client sends request to create DID document "fixtures/config/didDocument.json" as "JSON"
     Then check success response contains "#didDocumentHash"
+    # we wait until observer poll sidetree txn from ledger
+    Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#didDocumentHash"
     When client sends request to create DID document "fixtures/config/didDocument.json" as "queryParameter"

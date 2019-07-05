@@ -21,7 +21,6 @@ func New(cfg *viper.Viper) (*ServerContext, error) { // nolint
 
 	opsStore := mocks.NewMockOperationStore(nil)
 	cas := servermocks.NewMockCasClient(nil)
-	cas.OpsStore = opsStore
 
 	ctx := &ServerContext{
 		ProtocolClient:       servermocks.NewMockProtocolClient(),
