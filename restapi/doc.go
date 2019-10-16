@@ -16,8 +16,8 @@ Sidetree Node
     - application/json
 
     Produces:
+    - application/did+ld+json
     - application/jose
-    - application/json
 
 swagger:meta
 */

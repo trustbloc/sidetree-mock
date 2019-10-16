@@ -11,10 +11,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/swag"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
-	"github.com/trustbloc/sidetree-node/models"
 )
 
 //ResolutionHandler delegates resolution to document handler
@@ -42,17 +40,16 @@ func NewResolutionHandler(namespace string, protocol protocol.Client, handler Do
 func (r *ResolutionHandler) HandleResolveRequest(idOrDocument string) middleware.Responder {
 
 	if !strings.HasPrefix(idOrDocument, r.namespace) {
-		return &BadRequestError{&models.Error{Message: swag.String("must start with supported namespace")}}
+		return &BadRequestError{"must start with supported namespace"}
 	}
 
 	didDoc, err := r.docResolver.ResolveDocument(idOrDocument)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return &NotFoundError{&models.Error{Message: swag.String("document not found")}}
+			return &NotFoundError{"document not found"}
 		}
 
-		return &InternalServerError{&models.Error{Message: swag.String(err.Error())}}
+		return &InternalServerError{err.Error()}
 	}
-
-	return &Response{Body: &models.Response{Body: didDoc}, Status: http.StatusOK}
+	return &Response{Body: didDoc, Status: http.StatusOK}
 }

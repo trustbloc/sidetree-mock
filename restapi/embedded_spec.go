@@ -80,8 +80,7 @@ func init() {
       "get": {
         "description": "Fetches the latest DID Document of a DID.",
         "produces": [
-          "application/json",
-          "application/jose"
+          "application/did+ld+json"
         ],
         "parameters": [
           {
@@ -253,8 +252,7 @@ func init() {
       "get": {
         "description": "Fetches the latest DID Document of a DID.",
         "produces": [
-          "application/json",
-          "application/jose"
+          "application/did+ld+json"
         ],
         "parameters": [
           {

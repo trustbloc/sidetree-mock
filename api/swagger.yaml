@@ -55,8 +55,7 @@ paths:
           type: string
       description: Fetches the latest DID Document of a DID.
       produces:
-        - application/json
-        - application/jose
+        - application/did+ld+json
       responses:
         200:
           description: Returns the did document

@@ -12,14 +12,13 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/trustbloc/sidetree-node/models"
 )
 
 func TestWriteBodyError(t *testing.T) {
 
 	defer handlePanic(t)
 
-	err := NotFoundError{&models.Error{}}
+	err := NotFoundError{}
 	writeBody(httptest.NewRecorder(), &mockProducer{}, err.error)
 }
 
