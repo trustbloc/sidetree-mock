@@ -48,16 +48,15 @@ func (r *OperationHandler) HandleOperationRequest(request *models.Request) middl
 
 	operation, err := r.getOperation(request)
 	if err != nil {
-		return &BadRequestError{&models.Error{Message: swag.String(err.Error())}}
+		return &BadRequestError{err.Error()}
 	}
 
 	//handling operation based on validated operation type and encoded payload from request bytes
 	didDoc, err := r.docHandler.ProcessOperation(operation)
 	if err != nil {
-		return &InternalServerError{&models.Error{Message: swag.String(err.Error())}}
+		return &InternalServerError{err.Error()}
 	}
-
-	return &Response{Body: &models.Response{Body: didDoc}, Status: http.StatusOK}
+	return &Response{Body: didDoc, Status: http.StatusOK}
 
 }
 

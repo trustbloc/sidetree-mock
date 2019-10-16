@@ -37,10 +37,10 @@ func NewSidetreeAPI(spec *loads.Document) *SidetreeAPI {
 		APIKeyAuthenticator: security.APIKeyAuth,
 		BearerAuthenticator: security.BearerAuth,
 		JSONConsumer:        runtime.JSONConsumer(),
+		JSONProducer:        runtime.JSONProducer(),
 		ApplicationJoseProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationJose producer has not yet been implemented")
 		}),
-		JSONProducer: runtime.JSONProducer(),
 		GetDocumentDidOrDidDocumentHandler: GetDocumentDidOrDidDocumentHandlerFunc(func(params GetDocumentDidOrDidDocumentParams) middleware.Responder {
 			return middleware.NotImplemented("operation GetDocumentDidOrDidDocument has not yet been implemented")
 		}),
@@ -75,10 +75,10 @@ type SidetreeAPI struct {
 	// JSONConsumer registers a consumer for a "application/json" mime type
 	JSONConsumer runtime.Consumer
 
+	// JSONProducer registers a producer for a "application/did+ld+json" mime type
+	JSONProducer runtime.Producer
 	// ApplicationJoseProducer registers a producer for a "application/jose" mime type
 	ApplicationJoseProducer runtime.Producer
-	// JSONProducer registers a producer for a "application/json" mime type
-	JSONProducer runtime.Producer
 
 	// GetDocumentDidOrDidDocumentHandler sets the operation handler for the get document did or did document operation
 	GetDocumentDidOrDidDocumentHandler GetDocumentDidOrDidDocumentHandler
@@ -143,12 +143,12 @@ func (o *SidetreeAPI) Validate() error {
 		unregistered = append(unregistered, "JSONConsumer")
 	}
 
-	if o.ApplicationJoseProducer == nil {
-		unregistered = append(unregistered, "ApplicationJoseProducer")
-	}
-
 	if o.JSONProducer == nil {
 		unregistered = append(unregistered, "JSONProducer")
+	}
+
+	if o.ApplicationJoseProducer == nil {
+		unregistered = append(unregistered, "ApplicationJoseProducer")
 	}
 
 	if o.GetDocumentDidOrDidDocumentHandler == nil {
@@ -212,11 +212,14 @@ func (o *SidetreeAPI) ProducersFor(mediaTypes []string) map[string]runtime.Produ
 	for _, mt := range mediaTypes {
 		switch mt {
 
-		case "application/jose":
-			result["application/jose"] = o.ApplicationJoseProducer
+		case "application/did+ld+json":
+			result["application/did+ld+json"] = o.JSONProducer
 
 		case "application/json":
 			result["application/json"] = o.JSONProducer
+
+		case "application/jose":
+			result["application/jose"] = o.ApplicationJoseProducer
 
 		}
 

@@ -28,7 +28,7 @@ import (
 
 var logger = logrus.New()
 
-const sha2256 = 18
+const sha2_256 = 18
 const didDocNamespace = "did:sidetree:"
 const testDocumentURL = "http://localhost:48326/.sidetree/document"
 
@@ -79,7 +79,7 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 	}
 
 	if msg == "#didDocumentHash" {
-		documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+		documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2_256)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 }
 
 func (d *DIDSideSteps) resolveDIDDocument() error {
-	documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+	documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2_256)
 	if err != nil {
 		return err
 	}
