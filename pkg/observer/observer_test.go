@@ -21,9 +21,11 @@ import (
 
 func TestStartObserver(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
-		isCalled := false
+		txNum := make(map[uint64]*struct{}, 0)
+		hits := 0
 		var rw sync.RWMutex
-		Start(mockBlockchainClient{readValue: &observer.SidetreeTxn{AnchorAddress: "anchorAddress"}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
+		Start(&mockBlockchainClient{readValue: []*observer.SidetreeTxn{{AnchorAddress: "anchorAddress", TransactionNumber: 0},
+			{AnchorAddress: "anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
 				return json.Marshal(&observer.AnchorFile{})
 			}
@@ -32,14 +34,21 @@ func TestStartObserver(t *testing.T) {
 			return json.Marshal(&observer.BatchFile{Operations: []string{docutil.EncodeToString(b)}})
 		}}, mockOperationStoreClient{putFunc: func(ops batch.Operation) error {
 			rw.Lock()
-			isCalled = true
+			txNum[ops.TransactionNumber] = nil
+			hits++
 			rw.Unlock()
 			return nil
 		}})
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 		rw.RLock()
-		require.True(t, isCalled)
+		require.Equal(t, 2, hits)
+		require.Equal(t, 2, len(txNum))
+		_, ok := txNum[0]
+		require.True(t, ok)
+		_, ok = txNum[1]
+		require.True(t, ok)
 		rw.RUnlock()
+
 	})
 
 	t.Run("test error from operationStore put", func(t *testing.T) {
@@ -52,7 +61,7 @@ func TestStartObserver(t *testing.T) {
 }
 
 type mockBlockchainClient struct {
-	readValue *observer.SidetreeTxn
+	readValue []*observer.SidetreeTxn
 }
 
 // Read ledger transaction
@@ -61,7 +70,10 @@ func (m mockBlockchainClient) WriteAnchor(anchor string) error {
 
 }
 func (m mockBlockchainClient) Read(sinceTransactionNumber int) (bool, *observer.SidetreeTxn) {
-	return false, m.readValue
+	if sinceTransactionNumber+1 >= len(m.readValue) {
+		return false, nil
+	}
+	return false, m.readValue[sinceTransactionNumber+1]
 }
 
 type mockCASClient struct {

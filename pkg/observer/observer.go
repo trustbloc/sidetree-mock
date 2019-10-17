@@ -35,6 +35,7 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []sidetreeobserver.SidetreeTxn 
 				var sidetreeTxn *sidetreeobserver.SidetreeTxn
 				moreTransactions, sidetreeTxn = l.blockChainClient.Read(sinceTransactionNumber)
 				if sidetreeTxn != nil {
+					sinceTransactionNumber = int(sidetreeTxn.TransactionNumber)
 					logger.Debugf("found sidetree txn %d in ledger", sidetreeTxn.TransactionNumber)
 					sidetreeTxns = append(sidetreeTxns, *sidetreeTxn)
 				}
