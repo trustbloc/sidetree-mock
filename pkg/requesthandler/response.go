@@ -10,12 +10,11 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-	"github.com/trustbloc/sidetree-node/models"
 )
 
 // Response implements middleware.Responder
 type Response struct {
-	Body   *models.Response
+	Body   interface{}
 	Status uint
 }
 
@@ -27,7 +26,7 @@ func (o *Response) WriteResponse(rw http.ResponseWriter, producer runtime.Produc
 
 //BadRequestError holds the error which occurred during the operation
 type BadRequestError struct {
-	error *models.Error
+	error string
 }
 
 // WriteResponse writes the response to the client
@@ -38,7 +37,7 @@ func (o *BadRequestError) WriteResponse(rw http.ResponseWriter, producer runtime
 
 //InternalServerError holds the internal server error which occurred during the operation
 type InternalServerError struct {
-	error *models.Error
+	error string
 }
 
 // WriteResponse writes the response to the client
@@ -49,7 +48,7 @@ func (o *InternalServerError) WriteResponse(rw http.ResponseWriter, producer run
 
 //NotFoundError holds the error when the DID document is not found
 type NotFoundError struct {
-	error *models.Error
+	error string
 }
 
 // WriteResponse writes the response to the client
