@@ -7,7 +7,7 @@ module github.com/trustbloc/sidetree-node
 require (
 	github.com/evanphx/json-patch v4.1.0+incompatible
 	github.com/go-openapi/errors v0.19.0
-	github.com/go-openapi/loads v0.19.0
+	github.com/go-openapi/loads v0.19.4
 	github.com/go-openapi/runtime v0.19.0
 	github.com/go-openapi/spec v0.19.0
 	github.com/go-openapi/strfmt v0.19.0
