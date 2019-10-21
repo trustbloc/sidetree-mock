@@ -1,7 +1,7 @@
 [![Release](https://img.shields.io/github/release/trustbloc/sidetree-node.svg?style=flat-square)](https://github.com/trustbloc/sidetree-node/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://raw.githubusercontent.com/trustbloc/sidetree-node/master/LICENSE)
 
-[![Build Status](https://travis-ci.com/trustbloc/sidetree-node.svg?branch=master)](https://travis-ci.com/trustbloc/sidetree-node)
+[![Build Status](https://dev.azure.com/trustbloc/sidetree-node/_apis/build/status/trustbloc.sidetree-node?branchName=master)](https://dev.azure.com/trustbloc/sidetree-node/_build/latest?definitionId=3&branchName=master)
 [![GolangCI](https://golangci.com/badges/github.com/trustbloc/sidetree-node.svg)](https://golangci.com/r/github.com/trustbloc/sidetree-node)
 [![codecov](https://codecov.io/gh/trustbloc/sidetree-node/branch/master/graph/badge.svg)](https://codecov.io/gh/trustbloc/sidetree-node)
 [![Go Report Card](https://goreportcard.com/badge/github.com/trustbloc/sidetree-node?style=flat-square)](https://goreportcard.com/report/github.com/trustbloc/sidetree-node)
