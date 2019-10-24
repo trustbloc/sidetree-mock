@@ -5,7 +5,7 @@
 module github.com/trustbloc/sidetree-mock
 
 require (
-	github.com/evanphx/json-patch v4.1.0+incompatible
+	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/go-openapi/errors v0.19.0
 	github.com/go-openapi/loads v0.19.0
 	github.com/go-openapi/runtime v0.19.0
