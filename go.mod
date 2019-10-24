@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/validate v0.19.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/pkg/errors v0.8.1
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0
 	github.com/trustbloc/sidetree-core-go v0.0.0-20191017153620-a489e16494b3
