@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/stretchr/testify/require"
-	"github.com/trustbloc/sidetree-node/pkg/requesthandler/mocks"
+	"github.com/trustbloc/sidetree-mock/pkg/requesthandler/mocks"
 
 	coremocks "github.com/trustbloc/sidetree-core-go/pkg/mocks"
 )

@@ -19,7 +19,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
-	"github.com/trustbloc/sidetree-node/models"
+	"github.com/trustbloc/sidetree-mock/models"
 )
 
 //OperationHandler creates an operation from request and delegates document processing to document handler

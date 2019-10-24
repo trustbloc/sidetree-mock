@@ -25,7 +25,7 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	"golang.org/x/net/netutil"
 
-	"github.com/trustbloc/sidetree-node/restapi/operations"
+	"github.com/trustbloc/sidetree-mock/restapi/operations"
 )
 
 const (

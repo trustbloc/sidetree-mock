@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/trustbloc/sidetree-node/models"
+	"github.com/trustbloc/sidetree-mock/models"
 )
 
 type HttpRespone struct {
@@ -20,7 +20,7 @@ type HttpRespone struct {
 	ErrorMsg string
 }
 
-// SendRequest sends a regular POST request to the sidetree-node
+// SendRequest sends a regular POST request to the sidetree-mock
 // - If post request has operation "create" then return sidetree document else no response
 func SendRequest(url string, req *models.Request) (*HttpRespone, error) {
 	resp, err := sendHTTPRequest(url, req)
@@ -30,7 +30,7 @@ func SendRequest(url string, req *models.Request) (*HttpRespone, error) {
 	return handleHttpResp(resp)
 }
 
-// SendResolveRequest send a regular GET request to the sidetree-node and expects 'side tree document' argument as a response
+// SendResolveRequest send a regular GET request to the sidetree-mock and expects 'side tree document' argument as a response
 func SendResolveRequest(url string) (*HttpRespone, error) {
 	client := &http.Client{}
 	resp, err := client.Get(url)

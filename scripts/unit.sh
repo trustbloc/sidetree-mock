@@ -8,7 +8,7 @@
 set -e
 
 # Packages to exclude
-PKGS=`go list github.com/trustbloc/sidetree-node/... 2> /dev/null | \
+PKGS=`go list github.com/trustbloc/sidetree-mock/... 2> /dev/null | \
                                                    grep -v /mocks`
 echo "Running pkg unit tests..."
 go test -count=1 -cover $PKGS -p 1 -timeout=10m -race -coverprofile=coverage.txt -covermode=atomic

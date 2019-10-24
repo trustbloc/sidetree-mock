@@ -15,8 +15,8 @@ RUN apk add --no-cache \
 	libtool \
 	bash \
 	make;
-ADD . $GOPATH/src/github.com/trustbloc/sidetree-node
-WORKDIR $GOPATH/src/github.com/trustbloc/sidetree-node
+ADD . $GOPATH/src/github.com/trustbloc/sidetree-mock
+WORKDIR $GOPATH/src/github.com/trustbloc/sidetree-mock
 ENV EXECUTABLES go git
 
 FROM golang as sidetree
@@ -26,5 +26,5 @@ RUN GO_TAGS=${GO_TAGS} GOPROXY=${GOPROXY} make sidetree
 
 
 FROM alpine:${ALPINE_VER} as base
-COPY --from=sidetree /go/src/github.com/trustbloc/sidetree-node/.build/bin/sidetree-node /usr/local/bin
-CMD ["sidetree-node"]
+COPY --from=sidetree /go/src/github.com/trustbloc/sidetree-mock/.build/bin/sidetree-mock /usr/local/bin
+CMD ["sidetree-mock"]

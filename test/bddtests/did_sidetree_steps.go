@@ -22,8 +22,8 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/trustbloc/sidetree-node/models"
-	"github.com/trustbloc/sidetree-node/test/bddtests/restclient"
+	"github.com/trustbloc/sidetree-mock/models"
+	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
 var logger = logrus.New()
