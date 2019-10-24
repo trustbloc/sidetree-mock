@@ -24,7 +24,7 @@ GO_VER             = $(shell grep "GO_VER" .ci-properties |cut -d'=' -f2-)
 
 # Namespace for the sidetree node
 DOCKER_OUTPUT_NS          ?= trustbloc
-SIDETREE_NODE_IMAGE_NAME  ?= sidetree-node
+SIDETREE_MOCK_IMAGE_NAME  ?= sidetree-mock
 
 
 # Tool commands (overridable)
@@ -54,10 +54,10 @@ all: clean checks unit-test bddtests
 sidetree:
 	@echo "Building sidetree"
 	@mkdir -p ./.build/bin
-	@go build -o ./.build/bin/sidetree-node cmd/sidetree-server/main.go
+	@go build -o ./.build/bin/sidetree-mock cmd/sidetree-server/main.go
 
 sidetree-docker: sidetree
-	@docker build -f ./images/sidetree-node/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(SIDETREE_NODE_IMAGE_NAME):latest \
+	@docker build -f ./images/sidetree-mock/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(SIDETREE_MOCK_IMAGE_NAME):latest \
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) \
 	--build-arg GO_TAGS=$(GO_TAGS) \
@@ -77,8 +77,8 @@ endif
 generate-test-keys: clean
 	@mkdir -p -p test/bddtests/fixtures/keys/tls
 	@docker run -i --rm \
-		-v $(abspath .):/opt/go/src/github.com/trustbloc/sidetree-node \
-		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-node/scripts/generate_test_keys.sh" \
+		-v $(abspath .):/opt/go/src/github.com/trustbloc/sidetree-mock \
+		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-mock/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
 bddtests: clean clean-generate-files checks generate-test-keys sidetree-docker

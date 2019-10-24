@@ -20,7 +20,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
 
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
-	"github.com/trustbloc/sidetree-node/pkg/requesthandler/mocks"
+	"github.com/trustbloc/sidetree-mock/pkg/requesthandler/mocks"
 
 	coremocks "github.com/trustbloc/sidetree-core-go/pkg/mocks"
 
@@ -29,8 +29,8 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/swag"
 	"github.com/stretchr/testify/require"
-	"github.com/trustbloc/sidetree-node/models"
-	"github.com/trustbloc/sidetree-node/restapi/operations"
+	"github.com/trustbloc/sidetree-mock/models"
+	"github.com/trustbloc/sidetree-mock/restapi/operations"
 )
 
 const (

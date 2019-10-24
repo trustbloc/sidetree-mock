@@ -19,15 +19,15 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
-	"github.com/trustbloc/sidetree-node/pkg/observer"
+	"github.com/trustbloc/sidetree-mock/pkg/observer"
 
 	"github.com/go-openapi/runtime"
-	"github.com/trustbloc/sidetree-node/pkg/context"
-	"github.com/trustbloc/sidetree-node/pkg/requesthandler"
-	"github.com/trustbloc/sidetree-node/restapi/operations"
+	"github.com/trustbloc/sidetree-mock/pkg/context"
+	"github.com/trustbloc/sidetree-mock/pkg/requesthandler"
+	"github.com/trustbloc/sidetree-mock/restapi/operations"
 )
 
-//go:generate swagger generate server --target ../../sidetree-node --name Sidetree --spec ../api/swagger.yaml
+//go:generate swagger generate server --target ../../sidetree-mock --name Sidetree --spec ../api/swagger.yaml
 
 var logger = logrus.New()
 var config = viper.New()
@@ -60,7 +60,7 @@ func configureFlags(api *operations.SidetreeAPI) { //nolint:unparam
 		"tls-write-timeout",
 	}
 	for _, a := range args {
-		if envVar := os.Getenv(fmt.Sprintf("SIDETREE_NODE_%s", strings.Replace(strings.ToUpper(a), "-", "_", -1))); envVar != "" {
+		if envVar := os.Getenv(fmt.Sprintf("SIDETREE_MOCK_%s", strings.Replace(strings.ToUpper(a), "-", "_", -1))); envVar != "" {
 			os.Args = append(os.Args, fmt.Sprintf("--%s=%s", a, envVar))
 		}
 	}
@@ -80,7 +80,7 @@ func configureAPI(api *operations.SidetreeAPI) http.Handler {
 	api.ApplicationJoseProducer = runtime.JSONProducer()
 	api.JSONProducer = runtime.JSONProducer()
 
-	config.SetEnvPrefix("SIDETREE_NODE")
+	config.SetEnvPrefix("SIDETREE_MOCK")
 	config.AutomaticEnv()
 	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 

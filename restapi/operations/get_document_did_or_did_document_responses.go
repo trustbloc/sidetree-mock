@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	models "github.com/trustbloc/sidetree-node/models"
+	models "github.com/trustbloc/sidetree-mock/models"
 )
 
 // GetDocumentDidOrDidDocumentOKCode is the HTTP code returned for type GetDocumentDidOrDidDocumentOK

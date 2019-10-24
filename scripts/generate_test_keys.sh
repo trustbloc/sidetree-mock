@@ -10,8 +10,8 @@ set -e
 
 echo -e  "[SAN]\nsubjectAltName=DNS:*.example.com,DNS:localhost" >> /etc/ssl/openssl.cnf
 
-echo "Generating Sidetree-Node Test PKI"
-cd /opt/go/src/github.com/trustbloc/sidetree-node
+echo "Generating sidetree-mock Test PKI"
+cd /opt/go/src/github.com/trustbloc/sidetree-mock
 mkdir -p test/bddtests/fixtures/keys/tls
 
 #create CA
@@ -20,8 +20,8 @@ openssl req -new -x509 -key test/bddtests/fixtures/keys/tls/ec-cakey.pem -subj "
 
 #create TLS creds
 openssl ecparam -name prime256v1 -genkey -noout -out test/bddtests/fixtures/keys/tls/ec-key.pem
-openssl req -new -key test/bddtests/fixtures/keys/tls/ec-key.pem -subj "/C=CA/ST=ON/O=Example Inc.:Sidetree-Node/OU=Sidetree-Node/CN=*.example.com" -reqexts SAN -out test/bddtests/fixtures/keys/tls/ec-key.csr
+openssl req -new -key test/bddtests/fixtures/keys/tls/ec-key.pem -subj "/C=CA/ST=ON/O=Example Inc.:sidetree-mock/OU=sidetree-mock/CN=*.example.com" -reqexts SAN -out test/bddtests/fixtures/keys/tls/ec-key.csr
 openssl x509 -req -in test/bddtests/fixtures/keys/tls/ec-key.csr -extensions SAN -CA test/bddtests/fixtures/keys/tls/ec-cacert.pem -CAkey test/bddtests/fixtures/keys/tls/ec-cakey.pem -CAcreateserial -out test/bddtests/fixtures/keys/tls/ec-pubCert.pem -days 365
 
 
-echo "done generating Sidetree-Node PKI"
+echo "done generating sidetree-mock PKI"

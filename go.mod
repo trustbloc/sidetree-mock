@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-module github.com/trustbloc/sidetree-node
+module github.com/trustbloc/sidetree-mock
 
 require (
 	github.com/evanphx/json-patch v4.1.0+incompatible

@@ -9,12 +9,12 @@ services:
 
   sidetree:
     container_name: sidetree
-    image: ${TRUSTBLOCK_NS}/${SIDETREE_NODE_FIXTURE_IMAGE}:latest
+    image: ${TRUSTBLOCK_NS}/${SIDETREE_MOCK_FIXTURE_IMAGE}:latest
     environment:
-      - SIDETREE_NODE_TLS_CERTIFICATE=/etc/sidetree/tls/ec-pubCert.pem
-      - SIDETREE_NODE_TLS_KEY=/etc/sidetree/tls/ec-key.pem
-      - SIDETREE_NODE_HOST=0.0.0.0
-      - SIDETREE_NODE_PORT=48326
+      - SIDETREE_MOCK_TLS_CERTIFICATE=/etc/sidetree/tls/ec-pubCert.pem
+      - SIDETREE_MOCK_TLS_KEY=/etc/sidetree/tls/ec-key.pem
+      - SIDETREE_MOCK_HOST=0.0.0.0
+      - SIDETREE_MOCK_PORT=48326
     ports:
       - 48326:48326
     volumes:

@@ -13,7 +13,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 
-	models "github.com/trustbloc/sidetree-node/models"
+	models "github.com/trustbloc/sidetree-mock/models"
 )
 
 // NewPostDocumentParams creates a new PostDocumentParams object

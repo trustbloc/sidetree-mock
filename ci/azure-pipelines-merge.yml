@@ -26,9 +26,9 @@ jobs:
           trap logout EXIT
           source ./.ci-properties
           echo $DOCKER_PASSWORD | docker login --username $DOCKER_USER --password-stdin
-          make all
-          docker tag trustbloc/sidetree-node:latest  trustbloc/sidetree-node:$SIDETREE_NODE_TAG
-          docker push trustbloc/sidetree-node:$SIDETREE_NODE_TAG
+          make generate sidetree-docker
+          docker tag trustbloc/sidetree-mock:latest  trustbloc/sidetree-mock:$SIDETREE_MOCK_TAG
+          docker push trustbloc/sidetree-mock:$SIDETREE_MOCK_TAG
         env:
           DOCKER_USER: $(DOCKER_USER)
           DOCKER_PASSWORD: $(DOCKER_PASSWORD)

@@ -6,7 +6,7 @@
 #
 set -e
 
-echo "Running sidetree-node integration tests..."
+echo "Running sidetree-mock integration tests..."
 PWD=`pwd`
 cd test/bddtests
 go test -count=1 -v -cover . -p 1 -timeout=20m

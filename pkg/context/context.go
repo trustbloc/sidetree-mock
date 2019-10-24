@@ -14,7 +14,7 @@ import (
 
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
 
-	servermocks "github.com/trustbloc/sidetree-node/pkg/mocks"
+	servermocks "github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
 
 func New(cfg *viper.Viper) (*ServerContext, error) { // nolint

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-module github.com/trustbloc/sidetree-node/test/bddtests
+module github.com/trustbloc/sidetree-mock/test/bddtests
 
 go 1.12
 
@@ -14,8 +14,8 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/stretchr/testify v1.3.0
 	github.com/trustbloc/sidetree-core-go v0.0.0-20191017153620-a489e16494b3
-	github.com/trustbloc/sidetree-node v0.0.0
+	github.com/trustbloc/sidetree-mock v0.0.0
 
 )
 
-replace github.com/trustbloc/sidetree-node => ../..
+replace github.com/trustbloc/sidetree-mock => ../..
