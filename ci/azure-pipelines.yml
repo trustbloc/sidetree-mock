@@ -2,31 +2,36 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+pr:
+  - master
+
+trigger: none
+
+
 name: $(SourceBranchName)-$(Date:yyyyMMdd).$(Rev:r)
 variables:
   GO_VERSION: 1.13
   GOPATH: $(Agent.BuildDirectory)/go
 
-jobs:
-  - job: UnitTest
-    pool:
-      vmImage: ubuntu-16.04
-    timeoutInMinutes: 30
-    steps:
-    - template: azp-dependencies.yml
-    - checkout: self
-    - script: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
-    - script: make checks && make unit-test
-      displayName: Run checks and unit test
-    - script: bash <(curl https://codecov.io/bash)
-      displayName: Upload coverage to Codecov 
 
-  - job: BDDTest
+jobs:
+  - job: Merge
     pool:
       vmImage: ubuntu-16.04
-    timeoutInMinutes: 30
+    timeoutInMinutes: 60
     steps:
-    - template: azp-dependencies.yml
-    - checkout: self
-    - script: make bddtests
-      displayName: Run BDD tests
+      - template: azp-dependencies.yml
+      - checkout: self
+      - bash: |
+          function logout {
+            docker logout
+          }
+          trap logout EXIT
+          source ./.ci-properties
+          echo $DOCKER_PASSWORD | docker login --username $DOCKER_USER --password-stdin
+          make all
+          docker tag trustbloc/sidetree-node:latest  trustbloc/sidetree-node:$SIDETREE_NODE_TAG
+          docker push trustbloc/sidetree-node:$SIDETREE_NODE_TAG
+        env:
+          DOCKER_USER: $(DOCKER_USER)
+          DOCKER_PASSWORD: $(DOCKER_PASSWORD)
