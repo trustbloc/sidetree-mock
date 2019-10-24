@@ -15,6 +15,7 @@ jobs:
     steps:
     - template: azp-dependencies.yml
     - checkout: self
+    - script: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
     - script: make checks && make unit-test
       displayName: Run checks and unit test
     - script: bash <(curl https://codecov.io/bash)
