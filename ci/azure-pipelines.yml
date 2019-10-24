@@ -15,6 +15,7 @@ jobs:
     steps:
     - template: azp-dependencies.yml
     - checkout: self
+    - bash: echo "user=$DOCKER_USERNAME"
     - script: make checks && make unit-test
       displayName: Run checks and unit test
     - script: bash <(curl https://codecov.io/bash)
