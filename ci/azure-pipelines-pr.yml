@@ -2,6 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+
+pr:
+  - master
+trigger: none
+
 name: $(SourceBranchName)-$(Date:yyyyMMdd).$(Rev:r)
 variables:
   GO_VERSION: 1.13
