@@ -50,7 +50,7 @@ jobs:
           trap logout EXIT
           source ./.ci-properties
           echo $DOCKER_PASSWORD | docker login --username $DOCKER_USER --password-stdin
-          make generate sidetree-docker
+          make sidetree-docker
           docker tag trustbloc/sidetree-mock:latest  trustbloc/sidetree-mock:$SIDETREE_MOCK_TAG
           docker push trustbloc/sidetree-mock:$SIDETREE_MOCK_TAG
         env:
