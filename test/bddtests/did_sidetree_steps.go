@@ -14,15 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trustbloc/sidetree-core-go/pkg/document"
-
-	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
-
 	"github.com/DATA-DOG/godog"
-	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/trustbloc/sidetree-mock/models"
+	"github.com/trustbloc/sidetree-core-go/pkg/document"
+	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
+	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -30,7 +27,7 @@ var logger = logrus.New()
 
 const sha2256 = 18
 const didDocNamespace = "did:sidetree:"
-const testDocumentURL = "http://localhost:48326/.sidetree/document"
+const testDocumentURL = "http://localhost:48326/document"
 
 // DIDSideSteps
 type DIDSideSteps struct {
@@ -57,7 +54,7 @@ func (d *DIDSideSteps) sendDIDDocumentWithID(didDocumentPath, requestType, didID
 
 	if requestType == "JSON" {
 		req := newCreateRequest(didDocumentPath, didID)
-		d.reqEncodedDIDDoc = swag.StringValue(req.Payload)
+		d.reqEncodedDIDDoc = req.Payload
 		d.resp, err = restclient.SendRequest(testDocumentURL, req)
 		return err
 	}
@@ -101,8 +98,8 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	return err
 }
 
-func newCreateRequest(didDocumentPath, didID string) *models.Request {
-	operation := models.OperationTypeCreate
+func newCreateRequest(didDocumentPath, didID string) *model.Request {
+	operation := model.OperationTypeCreate
 	alg := "ES256K"
 	kid := "#key1"
 	payload := encodeDidDocument(didDocumentPath, didID)
@@ -110,16 +107,16 @@ func newCreateRequest(didDocumentPath, didID string) *models.Request {
 	return request(alg, kid, payload, signature, operation)
 }
 
-func request(alg, kid, payload, signature string, operation models.OperationType) *models.Request {
-	header := &models.Header{
-		Alg:       swag.String(alg),
-		Kid:       swag.String(kid),
+func request(alg, kid, payload, signature string, operation model.OperationType) *model.Request {
+	header := &model.Header{
+		Alg:       alg,
+		Kid:       kid,
 		Operation: operation,
 	}
-	req := &models.Request{
+	req := &model.Request{
 		Header:    header,
-		Payload:   swag.String(payload),
-		Signature: swag.String(signature)}
+		Payload:   payload,
+		Signature: signature}
 	return req
 }
 

@@ -10,7 +10,6 @@
 #   all:                 runs code checks, unit and integration tests
 #   checks:              runs code checks (license, lint)
 #   unit-test:           runs unit tests
-#   generate:            generates Go Swagger artifacts
 #   bddtests:            run bddtests
 #   generate-test-keys:  generate tls test keys
 #
@@ -35,16 +34,13 @@ GO_TAGS    ?=
 
 export GO111MODULE=on
 
-checks: generate license lint
+checks: license lint
 
 license:
 	@scripts/check_license.sh
 
 lint:
 	@scripts/check_lint.sh
-
-generate: clean-generate-files
-		@scripts/generate.sh
 
 unit-test:
 	@scripts/unit.sh
@@ -81,16 +77,8 @@ generate-test-keys: clean
 		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-mock/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
-bddtests: clean clean-generate-files checks generate-test-keys sidetree-docker
+bddtests: clean checks generate-test-keys sidetree-docker
 	@scripts/integration.sh
-
-clean-generate-files:
-	rm -Rf ./cmd/
-	rm -Rf ./models/
-	rm -Rf ./restapi/operations/
-	rm -Rf ./restapi/doc.go
-	rm -Rf ./restapi/embedded_spec.go
-	rm -Rf ./restapi/server.go
 
 clean:
 	rm -Rf ./.build

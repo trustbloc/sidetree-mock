@@ -5,21 +5,13 @@
 module github.com/trustbloc/sidetree-mock
 
 require (
-	github.com/evanphx/json-patch v4.1.0+incompatible
-	github.com/go-openapi/errors v0.19.0
-	github.com/go-openapi/loads v0.19.0
-	github.com/go-openapi/runtime v0.19.0
-	github.com/go-openapi/spec v0.19.0
-	github.com/go-openapi/strfmt v0.19.0
-	github.com/go-openapi/swag v0.19.0
-	github.com/go-openapi/validate v0.19.0
-	github.com/jessevdk/go-flags v1.4.0
+	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/gorilla/mux v1.7.3
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/viper v1.3.2
-	github.com/stretchr/testify v1.3.0
-	github.com/trustbloc/sidetree-core-go v0.0.0-20191017153620-a489e16494b3
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
+	github.com/stretchr/testify v1.4.0
+	github.com/trustbloc/sidetree-core-go v0.0.0-20191028174235-80e3b92d0da1
 )
 
 go 1.13
