@@ -19,7 +19,7 @@
 CONTAINER_IDS      = $(shell docker ps -a -q)
 DEV_IMAGES         = $(shell docker images dev-* -q)
 ARCH               = $(shell go env GOARCH)
-GO_VER             = $(shell grep "GO_VER" .ci-properties |cut -d'=' -f2-)
+GO_VER             = 1.12.5
 
 # Namespace for the sidetree node
 DOCKER_OUTPUT_NS          ?= trustbloc
