@@ -76,6 +76,7 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/trustbloc/sidetree-core-go v0.0.0-20191028174235-80e3b92d0da1 h1:uJdOEwzFYMpFLIFl28+zutAoIyihF591ZDLdCKD9VMM=
 github.com/trustbloc/sidetree-core-go v0.0.0-20191028174235-80e3b92d0da1/go.mod h1:FC7RAK7yPS2Y7iKQL2gt01fVi1JtYLbpUklNYcxCfYQ=
 github.com/trustbloc/sidetree-core-go v0.0.0-20191030143807-717ed28e9b4d/go.mod h1:FC7RAK7yPS2Y7iKQL2gt01fVi1JtYLbpUklNYcxCfYQ=
+github.com/trustbloc/sidetree-core-go v0.0.0-20191030160623-b6a8afec3cb8/go.mod h1:FC7RAK7yPS2Y7iKQL2gt01fVi1JtYLbpUklNYcxCfYQ=
 github.com/vishvananda/netlink v1.0.0 h1:bqNY2lgheFIu1meHUFSH3d7vG93AFyqg3oGbJCOJgSM=
 github.com/vishvananda/netlink v1.0.0/go.mod h1:+SR5DhBJrl6ZM7CoCKvpw5BKroDKQ+PJqOg65H/2ktk=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc h1:R83G5ikgLMxrBvLh22JhdfI8K6YXEPHx5P03Uu3DRs4=
