@@ -8,7 +8,6 @@ package bddtests
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -28,6 +27,7 @@ var logger = logrus.New()
 const sha2256 = 18
 const didDocNamespace = "did:sidetree:"
 const testDocumentURL = "http://localhost:48326/document"
+const initialValuesParam = ";initial-values="
 
 // DIDSideSteps
 type DIDSideSteps struct {
@@ -41,25 +41,27 @@ func NewDIDSideSteps(context *BDDContext) *DIDSideSteps {
 	return &DIDSideSteps{bddContext: context}
 }
 
-func (d *DIDSideSteps) sendDIDDocument(didDocumentPath, requestType string) error {
-	return d.sendDIDDocumentWithID(didDocumentPath, requestType, "")
+func (d *DIDSideSteps) createDIDDocument(didDocumentPath string) error {
+	return d.createDIDDocumentWithID(didDocumentPath, "")
 }
 
-func (d *DIDSideSteps) sendDIDDocumentWithID(didDocumentPath, requestType, didID string) error {
+func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) error {
 	var err error
-	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
-	if didID != "" {
-		didID = fmt.Sprintf(`"id": "%s",`, didDocNamespace+didID)
-	}
 
-	if requestType == "JSON" {
-		req := newCreateRequest(didDocumentPath, didID)
-		d.reqEncodedDIDDoc = req.Payload
-		d.resp, err = restclient.SendRequest(testDocumentURL, req)
-		return err
-	}
+	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
+
+	req := newCreateRequest(didDocumentPath, didID)
+	d.reqEncodedDIDDoc = req.Payload
+	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	return err
+}
+
+func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) error {
+	var err error
+	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
+
 	d.reqEncodedDIDDoc = encodeDidDocument(didDocumentPath, didID)
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + d.reqEncodedDIDDoc)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + didID + initialValuesParam + d.reqEncodedDIDDoc)
 	return err
 }
 
@@ -90,11 +92,20 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 }
 
 func (d *DIDSideSteps) resolveDIDDocument() error {
-	documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+	did, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
 	if err != nil {
 		return err
 	}
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + documentHash)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did)
+	return err
+}
+
+func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
+	did, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+	if err != nil {
+		return err
+	}
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did + initialValuesParam + d.reqEncodedDIDDoc)
 	return err
 }
 
@@ -141,11 +152,13 @@ func wait(seconds int) error {
 
 // RegisterSteps registers did sidetree steps
 func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^client sends request to create DID document "([^"]*)" as "([^"]*)" with DID id "([^"]*)"$`, d.sendDIDDocumentWithID)
+	s.Step(`^client sends request to create DID document "([^"]*)" with ID "([^"]*)"$`, d.createDIDDocumentWithID)
+	s.Step(`^client sends request to resolve DID document "([^"]*)" with ID "([^"]*)"$`, d.resolveDIDDocumentWithID)
 	s.Step(`^check error response contains "([^"]*)"$`, d.checkErrorResp)
-	s.Step(`^client sends request to create DID document "([^"]*)" as "([^"]*)"`, d.sendDIDDocument)
+	s.Step(`^client sends request to create DID document "([^"]*)"$`, d.createDIDDocument)
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessResp)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
+	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 
 }
