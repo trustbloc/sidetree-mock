@@ -29,7 +29,8 @@ import (
 var logger = logrus.New()
 var config = viper.New()
 
-const didDocNamespace = "did:sidetree:"
+const didDocNamespace = "did:sidetree"
+const basePath = "/document"
 
 func main() {
 	config.SetEnvPrefix("SIDETREE_MOCK")
@@ -68,8 +69,8 @@ func main() {
 
 	restSvc := httpserver.New(
 		getListenURL(),
-		diddochandler.NewUpdateHandler(didDocHandler),
-		diddochandler.NewResolveHandler(didDocHandler),
+		diddochandler.NewUpdateHandler(basePath, didDocHandler),
+		diddochandler.NewResolveHandler(basePath, didDocHandler),
 	)
 
 	if restSvc.Start() != nil {

@@ -70,14 +70,14 @@ ifneq ($(strip $(DEV_IMAGES)),)
 endif
 
 
-generate-test-keys: clean
+generate-test-keys:
 	@mkdir -p -p test/bddtests/fixtures/keys/tls
 	@docker run -i --rm \
 		-v $(abspath .):/opt/go/src/github.com/trustbloc/sidetree-mock \
 		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-mock/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
-bddtests: clean checks generate-test-keys sidetree-docker
+bddtests: generate-test-keys sidetree-docker
 	@scripts/integration.sh
 
 clean:
