@@ -25,7 +25,7 @@ import (
 var logger = logrus.New()
 
 const sha2256 = 18
-const didDocNamespace = "did:sidetree:"
+const didDocNamespace = "did:sidetree"
 const testDocumentURL = "http://localhost:48326/document"
 const initialValuesParam = ";initial-values="
 
@@ -61,7 +61,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) e
 	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
 
 	d.reqEncodedDIDDoc = encodeDidDocument(didDocumentPath, didID)
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + didID + initialValuesParam + d.reqEncodedDIDDoc)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + d.reqEncodedDIDDoc)
 	return err
 }
 

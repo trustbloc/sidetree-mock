@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
@@ -28,12 +29,13 @@ const (
 	url       = "localhost:8080"
 	clientURL = "http://" + url
 
-	didDocNamespace = "did:sidetree:"
-	didID           = didDocNamespace + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
+	didDocNamespace = "did:sidetree"
+	basePath        = "/document"
+	didID           = didDocNamespace + docutil.NamespaceDelimiter + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
 
-	sampleNamespace = "sample:sidetree:"
+	sampleNamespace = "sample:sidetree"
 	samplePath      = "/sample"
-	sampleID        = sampleNamespace + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
+	sampleID        = sampleNamespace + docutil.NamespaceDelimiter + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
 
 	createRequest = `{
   "header": {
@@ -52,8 +54,8 @@ func TestServer_Start(t *testing.T) {
 	sampleDocHandler := mocks.NewMockDocumentHandler().WithNamespace(sampleNamespace)
 
 	s := New(url,
-		diddochandler.NewUpdateHandler(didDocHandler),
-		diddochandler.NewResolveHandler(didDocHandler),
+		diddochandler.NewUpdateHandler(basePath, didDocHandler),
+		diddochandler.NewResolveHandler(basePath, didDocHandler),
 		newSampleUpdateHandler(sampleDocHandler),
 		newSampleResolveHandler(sampleDocHandler),
 	)
@@ -68,7 +70,7 @@ func TestServer_Start(t *testing.T) {
 		err := json.Unmarshal([]byte(createRequest), request)
 		require.NoError(t, err)
 
-		resp, err := httpPut(t, clientURL+diddochandler.Path, request)
+		resp, err := httpPut(t, clientURL+basePath, request)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		doc := make(map[string]interface{})
@@ -76,7 +78,7 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, doc["id"])
 	})
 	t.Run("Resolve DID doc", func(t *testing.T) {
-		resp, err := httpGet(t, clientURL+diddochandler.Path+"/"+didID)
+		resp, err := httpGet(t, clientURL+basePath+"/"+didID)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		doc := make(map[string]interface{})
