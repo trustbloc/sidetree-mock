@@ -73,8 +73,8 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-github.com/trustbloc/sidetree-core-go v0.1.1-0.20200124183623-a98ad9da837b h1:TcTBqWPQmV7dV0JtRzMP5Hx6Hj+kasZ79jf6EWdOOhg=
-github.com/trustbloc/sidetree-core-go v0.1.1-0.20200124183623-a98ad9da837b/go.mod h1:FC7RAK7yPS2Y7iKQL2gt01fVi1JtYLbpUklNYcxCfYQ=
+github.com/trustbloc/sidetree-core-go v0.1.1 h1:XUl0lMt/+yiaMh3EBvb/xuZYKLcsLyY+h8DqGEbGwk4=
+github.com/trustbloc/sidetree-core-go v0.1.1/go.mod h1:FC7RAK7yPS2Y7iKQL2gt01fVi1JtYLbpUklNYcxCfYQ=
 github.com/vishvananda/netlink v1.0.0 h1:bqNY2lgheFIu1meHUFSH3d7vG93AFyqg3oGbJCOJgSM=
 github.com/vishvananda/netlink v1.0.0/go.mod h1:+SR5DhBJrl6ZM7CoCKvpw5BKroDKQ+PJqOg65H/2ktk=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc h1:R83G5ikgLMxrBvLh22JhdfI8K6YXEPHx5P03Uu3DRs4=
