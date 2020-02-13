@@ -31,22 +31,10 @@ const (
 
 	didDocNamespace = "did:sidetree"
 	basePath        = "/document"
-	didID           = didDocNamespace + docutil.NamespaceDelimiter + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
 
+	sha2_256        = 18
 	sampleNamespace = "sample:sidetree"
 	samplePath      = "/sample"
-	sampleID        = sampleNamespace + docutil.NamespaceDelimiter + "EiDOQXC2GnoVyHwIRbjhLx_cNc6vmZaS04SZjZdlLLAPRg=="
-
-	createRequest = `{
-  "header": {
-    "operation": "create",
-    "kid": "#key1",
-    "alg": "ES256K"
-  },
-  "payload": "ewogICJAY29udGV4dCI6ICJodHRwczovL3czaWQub3JnL2RpZC92MSIsCiAgInB1YmxpY0tleSI6IFt7CiAgICAiaWQiOiAiI2tleTEiLAogICAgInR5cGUiOiAiU2VjcDI1NmsxVmVyaWZpY2F0aW9uS2V5MjAxOCIsCiAgICAicHVibGljS2V5SGV4IjogIjAyZjQ5ODAyZmIzZTA5YzZkZDQzZjE5YWE0MTI5M2QxZTBkYWQwNDRiNjhjZjgxY2Y3MDc5NDk5ZWRmZDBhYTlmMSIKICB9XSwKICAic2VydmljZSI6IFt7CiAgICAiaWQiOiAiSWRlbnRpdHlIdWIiLAogICAgInR5cGUiOiAiSWRlbnRpdHlIdWIiLAogICAgInNlcnZpY2VFbmRwb2ludCI6IHsKICAgICAgIkBjb250ZXh0IjogInNjaGVtYS5pZGVudGl0eS5mb3VuZGF0aW9uL2h1YiIsCiAgICAgICJAdHlwZSI6ICJVc2VyU2VydmljZUVuZHBvaW50IiwKICAgICAgImluc3RhbmNlIjogWyJkaWQ6YmFyOjQ1NiIsICJkaWQ6emF6Ojc4OSJdCiAgICB9CiAgfV0KfQo=",
-  "signature": "mAJp4ZHwY5UMA05OEKvoZreRo0XrYe77s3RLyGKArG85IoBULs4cLDBtdpOToCtSZhPvCC2xOUXMGyGXDmmEHg"
-}
-`
 )
 
 func TestServer_Start(t *testing.T) {
@@ -65,9 +53,21 @@ func TestServer_Start(t *testing.T) {
 	// Wait for the service to start
 	time.Sleep(time.Second)
 
+	encodedPayload, err := getCreatePayload()
+	require.NoError(t, err)
+
+	didID, err := docutil.CalculateID(didDocNamespace, encodedPayload, sha2_256)
+	require.NoError(t, err)
+
+	sampleID, err := docutil.CalculateID(sampleNamespace, encodedPayload, sha2_256)
+	require.NoError(t, err)
+
 	t.Run("Create DID doc", func(t *testing.T) {
+		createReq, err := getCreateRequest()
+		require.NoError(t, err)
+
 		request := &model.Request{}
-		err := json.Unmarshal([]byte(createRequest), request)
+		err = json.Unmarshal(createReq, request)
 		require.NoError(t, err)
 
 		resp, err := httpPut(t, clientURL+basePath, request)
@@ -86,8 +86,11 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, doc["id"])
 	})
 	t.Run("Create Sample doc", func(t *testing.T) {
+		createReq, err := getCreateRequest()
+		require.NoError(t, err)
+
 		request := &model.Request{}
-		err := json.Unmarshal([]byte(createRequest), request)
+		err = json.Unmarshal(createReq, request)
 		require.NoError(t, err)
 
 		resp, err := httpPut(t, clientURL+samplePath, request)
@@ -224,3 +227,47 @@ func (h *sampleResolveHandler) Method() string {
 func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 	return h.Resolve
 }
+
+func getCreatePayload() (string, error) {
+	payload, err := json.Marshal(
+		struct {
+			Operation   model.OperationType `json:"type"`
+			DIDDocument string              `json:"didDocument"`
+		}{model.OperationTypeCreate, docutil.EncodeToString([]byte(validDoc))})
+
+	if err != nil {
+		return "", nil
+	}
+
+	return docutil.EncodeToString(payload), nil
+}
+
+func getCreateRequest() ([]byte, error) {
+	encodedPayload, err := getCreatePayload()
+	if err != nil {
+		return nil, err
+	}
+
+	req := model.Request{
+		Protected: &model.Header{
+			Alg: "ES256K",
+			Kid: "#key1",
+		},
+		Payload:   encodedPayload,
+		Signature: "",
+	}
+
+	return json.Marshal(req)
+}
+
+const validDoc = `{
+	"@context": ["https://w3id.org/did/v1"],
+	"created": "2019-09-23T14:16:59.261024-04:00",
+	"publicKey": [{
+		"controller": "controller",
+		"id": "#key-1",
+		"publicKeyBase58": "GY4GunSXBPBfhLCzDL7iGmP5dR3sBDCJZkkaGK8VgYQf",
+		"type": "Ed25519VerificationKey2018"
+	}],
+	"updated": "2019-09-23T14:16:59.261024-04:00"
+}`

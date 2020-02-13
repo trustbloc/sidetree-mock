@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package bddtests
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -31,9 +31,10 @@ const initialValuesParam = ";initial-values="
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	reqEncodedDIDDoc string
-	resp             *restclient.HttpRespone
-	bddContext       *BDDContext
+	encodedCreatePayload string
+	encodedDoc           string
+	resp                 *restclient.HttpRespone
+	bddContext           *BDDContext
 }
 
 // NewDIDSideSteps
@@ -50,8 +51,17 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 
 	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
 
-	req := newCreateRequest(didDocumentPath, didID)
-	d.reqEncodedDIDDoc = req.Payload
+	encodedDidDoc := encodeDidDocument(didDocumentPath, didID)
+	payload, err := getCreatePayload(encodedDidDoc)
+	if err != nil {
+		return err
+	}
+
+	req := request("ES256K", "#key1", payload, "")
+
+	d.encodedCreatePayload = payload
+	d.encodedDoc = encodedDidDoc
+
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
 }
@@ -60,8 +70,8 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) e
 	var err error
 	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
 
-	d.reqEncodedDIDDoc = encodeDidDocument(didDocumentPath, didID)
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + d.reqEncodedDIDDoc)
+	d.encodedDoc = encodeDidDocument(didDocumentPath, didID)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + d.encodedDoc)
 	return err
 }
 
@@ -78,7 +88,7 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 	}
 
 	if msg == "#didDocumentHash" {
-		documentHash, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+		documentHash, err := docutil.CalculateID(didDocNamespace, d.encodedCreatePayload, sha2256)
 		if err != nil {
 			return err
 		}
@@ -92,7 +102,7 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 }
 
 func (d *DIDSideSteps) resolveDIDDocument() error {
-	did, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+	did, err := docutil.CalculateID(didDocNamespace, d.encodedCreatePayload, sha2256)
 	if err != nil {
 		return err
 	}
@@ -101,34 +111,38 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 }
 
 func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
-	did, err := docutil.CalculateID(didDocNamespace, d.reqEncodedDIDDoc, sha2256)
+	did, err := docutil.CalculateID(didDocNamespace, d.encodedCreatePayload, sha2256)
 	if err != nil {
 		return err
 	}
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did + initialValuesParam + d.reqEncodedDIDDoc)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did + initialValuesParam + d.encodedDoc)
 	return err
 }
 
-func newCreateRequest(didDocumentPath, didID string) *model.Request {
-	operation := model.OperationTypeCreate
-	alg := "ES256K"
-	kid := "#key1"
-	payload := encodeDidDocument(didDocumentPath, didID)
-	signature := "mAJp4ZHwY5UMA05OEKvoZreRo0XrYe77s3RLyGKArG85IoBULs4cLDBtdpOToCtSZhPvCC2xOUXMGyGXDmmEHg"
-	return request(alg, kid, payload, signature, operation)
-}
-
-func request(alg, kid, payload, signature string, operation model.OperationType) *model.Request {
+func request(alg, kid, payload, signature string) *model.Request {
 	header := &model.Header{
 		Alg:       alg,
 		Kid:       kid,
-		Operation: operation,
 	}
 	req := &model.Request{
-		Header:    header,
+		Protected:    header,
 		Payload:   payload,
 		Signature: signature}
 	return req
+}
+
+func getCreatePayload(encodedDoc string) (string, error) {
+	payload, err := json.Marshal(
+		struct {
+			Operation   model.OperationType `json:"type"`
+			DIDDocument string              `json:"didDocument"`
+		}{model.OperationTypeCreate, encodedDoc})
+
+	if err != nil {
+		return "", err
+	}
+
+	return docutil.EncodeToString(payload), nil
 }
 
 func encodeDidDocument(didDocumentPath, didID string) string {
@@ -141,7 +155,7 @@ func encodeDidDocument(didDocumentPath, didID string) string {
 	// add new key to make the document unique
 	doc["unique"] = generateUUID()
 	bytes, _ := doc.Bytes()
-	return base64.URLEncoding.EncodeToString(bytes)
+	return docutil.EncodeToString(bytes)
 }
 
 func wait(seconds int) error {
@@ -160,5 +174,4 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
-
 }
