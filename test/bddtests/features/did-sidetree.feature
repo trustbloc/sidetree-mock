@@ -29,3 +29,15 @@ Feature:
     # retrieve document with initial value after it becomes available on the ledger
     When client sends request to resolve DID document with initial value
     Then check success response contains "#didDocumentHash"
+
+  @create_delete_did_doc
+  Scenario: delete valid did doc
+    When client sends request to create DID document "fixtures/config/didDocument.json"
+    Then check success response contains "#didDocumentHash"
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check success response contains "#didDocumentHash"
+    When client sends request to delete DID document
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check error response contains "document is no longer available"

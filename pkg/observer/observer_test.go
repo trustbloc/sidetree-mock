@@ -32,7 +32,7 @@ func TestStartObserver(t *testing.T) {
 			b, err := json.Marshal(batch.Operation{})
 			require.NoError(t, err)
 			return json.Marshal(&observer.BatchFile{Operations: []string{docutil.EncodeToString(b)}})
-		}}, mockOperationStoreClient{putFunc: func(ops batch.Operation) error {
+		}}, mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
 			rw.Lock()
 			txNum[ops.TransactionNumber] = nil
 			hits++
@@ -52,9 +52,9 @@ func TestStartObserver(t *testing.T) {
 	})
 
 	t.Run("test error from operationStore put", func(t *testing.T) {
-		err := operationStore{operationStoreClient: mockOperationStoreClient{putFunc: func(ops batch.Operation) error {
+		err := operationStore{operationStoreClient: mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
 			return fmt.Errorf("put error")
-		}}}.Put([]batchapi.Operation{{Type: "1"}})
+		}}}.Put([]*batchapi.Operation{&batch.Operation{Type: "1"}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "put in operation store failed")
 	})
@@ -92,14 +92,14 @@ func (m mockCASClient) Read(key string) ([]byte, error) {
 }
 
 type mockOperationStoreClient struct {
-	putFunc func(ops batch.Operation) error
+	putFunc func(ops *batch.Operation) error
 }
 
-func (m mockOperationStoreClient) Get(uniqueSuffix string) ([]batch.Operation, error) {
+func (m mockOperationStoreClient) Get(uniqueSuffix string) ([]*batch.Operation, error) {
 	return nil, nil
 }
 
-func (m mockOperationStoreClient) Put(op batch.Operation) error {
+func (m mockOperationStoreClient) Put(op *batch.Operation) error {
 	if m.putFunc != nil {
 		return m.putFunc(op)
 	}

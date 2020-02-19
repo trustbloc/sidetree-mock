@@ -60,7 +60,7 @@ type operationStore struct {
 	operationStoreClient processor.OperationStoreClient
 }
 
-func (o operationStore) Put(ops []batchapi.Operation) error {
+func (o operationStore) Put(ops []*batchapi.Operation) error {
 	for _, op := range ops {
 		if err := o.operationStoreClient.Put(op); err != nil {
 			return errors.Wrap(err, "put in operation store failed")
