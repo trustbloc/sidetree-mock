@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
+	"github.com/trustbloc/sidetree-core-go/pkg/batch/cutter"
+	"github.com/trustbloc/sidetree-core-go/pkg/batch/opqueue"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
@@ -27,6 +29,7 @@ func New(cfg *viper.Viper) (*ServerContext, error) { // nolint
 		CasClient:            cas,
 		BlockchainClient:     mocks.NewMockBlockchainClient(nil),
 		OperationStoreClient: opsStore,
+		OpQueue:              &opqueue.MemQueue{},
 	}
 
 	return ctx, nil
@@ -39,6 +42,7 @@ type ServerContext struct {
 	CasClient            *servermocks.MockCasClient
 	BlockchainClient     *mocks.MockBlockchainClient
 	OperationStoreClient *mocks.MockOperationStore
+	OpQueue              *opqueue.MemQueue
 }
 
 // Protocol returns the ProtocolClient
@@ -59,4 +63,9 @@ func (m *ServerContext) CAS() batch.CASClient {
 // OperationStore returns the OperationStore client
 func (m *ServerContext) OperationStore() processor.OperationStoreClient {
 	return m.OperationStoreClient
+}
+
+// OperationQueue returns the queue containing the pending operations
+func (m *ServerContext) OperationQueue() cutter.OperationQueue {
+	return m.OpQueue
 }

@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// create new batch writer
-	batchWriter, err := batch.New(ctx)
+	batchWriter, err := batch.New(didDocNamespace, ctx)
 	if err != nil {
 		logger.Errorf("Failed to create batch writer: %s", err.Error())
 		panic(err)
@@ -64,7 +64,7 @@ func main() {
 		ctx.Protocol(),
 		didvalidator.New(ctx.OperationStore()),
 		batchWriter,
-		processor.New(ctx.OperationStore()),
+		processor.New(didDocNamespace, ctx.OperationStore()),
 	)
 
 	restSvc := httpserver.New(
