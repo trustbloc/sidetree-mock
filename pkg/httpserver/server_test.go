@@ -22,7 +22,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/dochandler"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 )
 
 const (
@@ -53,9 +53,13 @@ func TestServer_Start(t *testing.T) {
 	// Wait for the service to start
 	time.Sleep(time.Second)
 
-	encodedPayload, err := getCreatePayload()
+	payload, err := getCreatePayload()
 	require.NoError(t, err)
 
+	req, err := getCreateRequest()
+	require.NoError(t, err)
+
+	encodedPayload := docutil.EncodeToString(payload)
 	didID, err := docutil.CalculateID(didDocNamespace, encodedPayload, sha2_256)
 	require.NoError(t, err)
 
@@ -63,14 +67,7 @@ func TestServer_Start(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Create DID doc", func(t *testing.T) {
-		createReq, err := getCreateRequest()
-		require.NoError(t, err)
-
-		request := &model.Request{}
-		err = json.Unmarshal(createReq, request)
-		require.NoError(t, err)
-
-		resp, err := httpPut(t, clientURL+basePath, request)
+		resp, err := httpPut(t, clientURL+basePath, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		doc := make(map[string]interface{})
@@ -86,14 +83,7 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, doc["id"])
 	})
 	t.Run("Create Sample doc", func(t *testing.T) {
-		createReq, err := getCreateRequest()
-		require.NoError(t, err)
-
-		request := &model.Request{}
-		err = json.Unmarshal(createReq, request)
-		require.NoError(t, err)
-
-		resp, err := httpPut(t, clientURL+samplePath, request)
+		resp, err := httpPut(t, clientURL+samplePath, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		doc := make(map[string]interface{})
@@ -116,12 +106,10 @@ func TestServer_Start(t *testing.T) {
 
 // httpPut sends a regular POST request to the sidetree-node
 // - If post request has operation "create" then return sidetree document else no response
-func httpPut(t *testing.T, url string, req *model.Request) ([]byte, error) {
+func httpPut(t *testing.T, url string, req []byte) ([]byte, error) {
 	client := &http.Client{}
-	b, err := json.Marshal(req)
-	require.NoError(t, err)
 
-	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(req))
 	require.NoError(t, err)
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -228,46 +216,35 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 	return h.Resolve
 }
 
-func getCreatePayload() (string, error) {
-	payload, err := json.Marshal(
-		struct {
-			Operation   model.OperationType `json:"type"`
-			DIDDocument string              `json:"didDocument"`
-		}{model.OperationTypeCreate, docutil.EncodeToString([]byte(validDoc))})
-
-	if err != nil {
-		return "", nil
+func getCreatePayload() ([]byte, error) {
+	info := &helper.CreateRequestInfo{
+		OpaqueDocument: validDoc,
+		RecoveryKey:    "recoveryKey",
+		MultihashCode:  sha2_256,
 	}
-
-	return docutil.EncodeToString(payload), nil
+	return helper.NewCreateRequest(info)
 }
 
 func getCreateRequest() ([]byte, error) {
-	encodedPayload, err := getCreatePayload()
+	payload, err := getCreatePayload()
 	if err != nil {
 		return nil, err
 	}
 
-	req := model.Request{
-		Protected: &model.Header{
-			Alg: "ES256K",
-			Kid: "#key1",
-		},
+	encodedPayload := docutil.EncodeToString(payload)
+	return helper.NewSignedRequest(&helper.SignedRequestInfo{
 		Payload:   encodedPayload,
-		Signature: "",
-	}
-
-	return json.Marshal(req)
+		Algorithm: "alg",
+		KID:       "kid",
+		Signature: "signature",
+	})
 }
 
 const validDoc = `{
-	"@context": ["https://w3id.org/did/v1"],
-	"created": "2019-09-23T14:16:59.261024-04:00",
 	"publicKey": [{
 		"controller": "controller",
 		"id": "#key-1",
 		"publicKeyBase58": "GY4GunSXBPBfhLCzDL7iGmP5dR3sBDCJZkkaGK8VgYQf",
 		"type": "Ed25519VerificationKey2018"
-	}],
-	"updated": "2019-09-23T14:16:59.261024-04:00"
+	}]
 }`
