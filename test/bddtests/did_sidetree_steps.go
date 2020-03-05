@@ -8,7 +8,6 @@ package bddtests
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -19,8 +18,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -38,7 +37,6 @@ const (
 // DIDSideSteps
 type DIDSideSteps struct {
 	encodedCreatePayload string
-	encodedDoc           string
 	resp                 *restclient.HttpRespone
 	bddContext           *BDDContext
 }
@@ -57,16 +55,17 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 
 	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
 
-	encodedDidDoc := encodeDidDocument(didDocumentPath, didID)
-	payload, err := getCreatePayload(encodedDidDoc)
+	opaqueDoc := getOpaqueDocument(didDocumentPath, didID)
+	payload, err := getCreatePayload(opaqueDoc)
 	if err != nil {
 		return err
 	}
 
-	req := request("ES256K", "#key1", payload, "")
-
-	d.encodedCreatePayload = payload
-	d.encodedDoc = encodedDidDoc
+	d.encodedCreatePayload = docutil.EncodeToString(payload)
+	req, err := getRequest(d.encodedCreatePayload)
+	if err != nil {
+		return err
+	}
 
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
@@ -85,7 +84,10 @@ func (d *DIDSideSteps) deleteDIDDocument() error {
 		return err
 	}
 
-	req := request("ES256K", "#key1", payload, "")
+	req, err := getRequest(payload)
+	if err != nil {
+		return err
+	}
 
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
@@ -95,8 +97,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) e
 	var err error
 	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
 
-	d.encodedDoc = encodeDidDocument(didDocumentPath, didID)
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + d.encodedDoc)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + d.encodedCreatePayload)
 	return err
 }
 
@@ -118,7 +119,20 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 			return err
 		}
 		msg = strings.Replace(msg, "#didDocumentHash", documentHash, -1)
+		didDoc, err := document.DidDocumentFromBytes(d.resp.Payload)
+		if err != nil {
+			return err
+		}
+
+		// perform basic checks on document
+		if didDoc.ID() == "" || didDoc.Context()[0] != "https://w3id.org/did/v1" ||
+			!strings.Contains(didDoc.PublicKeys()[0].Controller(), didDoc.ID()) {
+			return errors.New("response is not a valid did document")
+		}
+
+		logger.Infof("response is a valid did document")
 	}
+
 	logger.Infof("check success resp %s contain %s", string(d.resp.Payload), msg)
 	if !strings.Contains(string(d.resp.Payload), msg) {
 		return errors.Errorf("success resp %s doesn't contain %s", d.resp.Payload, msg)
@@ -140,73 +154,36 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	if err != nil {
 		return err
 	}
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did + initialValuesParam + d.encodedDoc)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did + initialValuesParam + d.encodedCreatePayload)
 	return err
 }
 
-func request(alg, kid, payload, signature string) *model.Request {
-	header := &model.Header{
-		Alg: alg,
-		Kid: kid,
-	}
-	req := &model.Request{
-		Protected: header,
-		Payload:   payload,
-		Signature: signature}
-	return req
+func getCreatePayload(doc string) ([]byte, error) {
+	return helper.NewCreateRequest(&helper.CreateRequestInfo{
+		OpaqueDocument:  doc,
+		RecoveryKey:     "recoveryKey",
+		NextRecoveryOTP: recoveryOTP,
+		MultihashCode:   sha2_256,
+	})
 }
 
-func getCreatePayload(encodedDoc string) (string, error) {
-	nextRecoveryOTPHash, err := docutil.ComputeMultihash(sha2_256, []byte(recoveryOTP))
-	if err != nil {
-		return "", err
-	}
-
-	nextUpdateOTPHash, err := docutil.ComputeMultihash(sha2_256, []byte(updateOTP))
-	if err != nil {
-		return "", err
-	}
-
-	payload, err := json.Marshal(
-		struct {
-			Operation           model.OperationType `json:"type"`
-			DIDDocument         string              `json:"didDocument"`
-			NextUpdateOTPHash   string              `json:"nextUpdateOtpHash"`
-			NextRecoveryOTPHash string              `json:"nextRecoveryOtpHash"`
-		}{
-			Operation:           model.OperationTypeCreate,
-			DIDDocument:         encodedDoc,
-			NextUpdateOTPHash:   base64.URLEncoding.EncodeToString(nextUpdateOTPHash),
-			NextRecoveryOTPHash: base64.URLEncoding.EncodeToString(nextRecoveryOTPHash),
-		})
-
-	if err != nil {
-		return "", err
-	}
-
-	return docutil.EncodeToString(payload), nil
+func getRequest(payload string) ([]byte, error) {
+	return helper.NewSignedRequest(&helper.SignedRequestInfo{
+		Payload:   payload,
+		Algorithm: "alg",
+		KID:       "kid",
+		Signature: "signature",
+	})
 }
 
 func getDeletePayload(did string) (string, error) {
-	payload, err := json.Marshal(
-		struct {
-			Operation       model.OperationType `json:"type"`
-			DidUniqueSuffix string              `json:"didUniqueSuffix"`
-			RecoveryOTP     string              `json:"recoveryOtp"`
-		}{
-			Operation:       model.OperationTypeDelete,
-			DidUniqueSuffix: did,
-			RecoveryOTP:     base64.URLEncoding.EncodeToString([]byte(recoveryOTP)),
-		})
-
-	if err != nil {
-		return "", err
-	}
-
-	return docutil.EncodeToString(payload), nil
+	return helper.NewDeletePayload(&helper.DeletePayloadInfo{
+		DidUniqueSuffix: did,
+		RecoveryOTP:     base64.URLEncoding.EncodeToString([]byte(recoveryOTP)),
+	})
 }
 
-func encodeDidDocument(didDocumentPath, didID string) string {
+func getOpaqueDocument(didDocumentPath, didID string) string {
 	r, _ := os.Open(didDocumentPath)
 	data, _ := ioutil.ReadAll(r)
 	doc, _ := document.FromBytes(data)
@@ -216,7 +193,7 @@ func encodeDidDocument(didDocumentPath, didID string) string {
 	// add new key to make the document unique
 	doc["unique"] = generateUUID()
 	bytes, _ := doc.Bytes()
-	return docutil.EncodeToString(bytes)
+	return string(bytes)
 }
 
 func wait(seconds int) error {
