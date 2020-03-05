@@ -5,7 +5,7 @@
 module github.com/trustbloc/sidetree-mock/test/bddtests
 
 require (
-	github.com/DATA-DOG/godog v0.7.13
+	github.com/cucumber/godog v0.8.1
 	github.com/fsouza/go-dockerclient v1.3.0
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0

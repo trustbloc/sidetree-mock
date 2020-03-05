@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/godog"
+	"github.com/cucumber/godog"
 )
 
 var composition *Composition
