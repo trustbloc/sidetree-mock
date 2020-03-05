@@ -21,6 +21,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
+
 	sidetreecontext "github.com/trustbloc/sidetree-mock/pkg/context"
 	"github.com/trustbloc/sidetree-mock/pkg/httpserver"
 	"github.com/trustbloc/sidetree-mock/pkg/observer"
@@ -29,7 +30,7 @@ import (
 var logger = logrus.New()
 var config = viper.New()
 
-const didDocNamespace = "did:sidetree"
+const defaultDIDDocNamespace = "did:sidetree"
 const basePath = "/document"
 
 func main() {
@@ -43,6 +44,12 @@ func main() {
 	if err != nil {
 		logger.Errorf("Failed to create new context: %s", err.Error())
 		panic(err)
+	}
+
+	didDocNamespace := defaultDIDDocNamespace
+
+	if config.GetString("did.namespace") != "" {
+		didDocNamespace = config.GetString("did.namespace")
 	}
 
 	// create new batch writer

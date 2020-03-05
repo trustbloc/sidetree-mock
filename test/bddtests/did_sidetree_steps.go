@@ -14,19 +14,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DATA-DOG/godog"
+	"github.com/cucumber/godog"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
 var logger = logrus.New()
 
 const (
-	didDocNamespace    = "did:sidetree"
+	didDocNamespace    = "did:sidetree:test"
 	testDocumentURL    = "http://localhost:48326/document"
 	initialValuesParam = ";initial-values="
 	sha2_256           = 18
