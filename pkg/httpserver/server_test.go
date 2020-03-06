@@ -52,18 +52,16 @@ func TestServer_Start(t *testing.T) {
 
 	// Wait for the service to start
 	time.Sleep(time.Second)
-
-	payload, err := getCreatePayload()
-	require.NoError(t, err)
+	
 
 	req, err := getCreateRequest()
 	require.NoError(t, err)
 
-	encodedPayload := docutil.EncodeToString(payload)
-	didID, err := docutil.CalculateID(didDocNamespace, encodedPayload, sha2_256)
+	encodedCreateReq := docutil.EncodeToString(req)
+	didID, err := docutil.CalculateID(didDocNamespace, encodedCreateReq, sha2_256)
 	require.NoError(t, err)
 
-	sampleID, err := docutil.CalculateID(sampleNamespace, encodedPayload, sha2_256)
+	sampleID, err := docutil.CalculateID(sampleNamespace, encodedCreateReq, sha2_256)
 	require.NoError(t, err)
 
 	t.Run("Create DID doc", func(t *testing.T) {
@@ -216,7 +214,7 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 	return h.Resolve
 }
 
-func getCreatePayload() ([]byte, error) {
+func getCreateRequest() ([]byte, error) {
 	info := &helper.CreateRequestInfo{
 		OpaqueDocument: validDoc,
 		RecoveryKey:    "recoveryKey",
@@ -225,20 +223,6 @@ func getCreatePayload() ([]byte, error) {
 	return helper.NewCreateRequest(info)
 }
 
-func getCreateRequest() ([]byte, error) {
-	payload, err := getCreatePayload()
-	if err != nil {
-		return nil, err
-	}
-
-	encodedPayload := docutil.EncodeToString(payload)
-	return helper.NewSignedRequest(&helper.SignedRequestInfo{
-		Payload:   encodedPayload,
-		Algorithm: "alg",
-		KID:       "kid",
-		Signature: "signature",
-	})
-}
 
 const validDoc = `{
 	"publicKey": [{

@@ -56,16 +56,12 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
 
 	opaqueDoc := getOpaqueDocument(didDocumentPath, didID)
-	payload, err := getCreatePayload(opaqueDoc)
+	req, err := getCreateRequest(opaqueDoc)
 	if err != nil {
 		return err
 	}
 
-	d.encodedCreatePayload = docutil.EncodeToString(payload)
-	req, err := getRequest(d.encodedCreatePayload)
-	if err != nil {
-		return err
-	}
+	d.encodedCreatePayload = docutil.EncodeToString(req)
 
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
@@ -158,7 +154,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	return err
 }
 
-func getCreatePayload(doc string) ([]byte, error) {
+func getCreateRequest(doc string) ([]byte, error) {
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:  doc,
 		RecoveryKey:     "recoveryKey",
