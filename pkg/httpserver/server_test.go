@@ -23,6 +23,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
+	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 )
 
 const (
@@ -52,16 +53,18 @@ func TestServer_Start(t *testing.T) {
 
 	// Wait for the service to start
 	time.Sleep(time.Second)
-	
 
 	req, err := getCreateRequest()
 	require.NoError(t, err)
 
-	encodedCreateReq := docutil.EncodeToString(req)
-	didID, err := docutil.CalculateID(didDocNamespace, encodedCreateReq, sha2_256)
+	var createReq model.CreateRequest
+	err = json.Unmarshal(req, &createReq)
 	require.NoError(t, err)
 
-	sampleID, err := docutil.CalculateID(sampleNamespace, encodedCreateReq, sha2_256)
+	didID, err := docutil.CalculateID(didDocNamespace, createReq.SuffixData, sha2_256)
+	require.NoError(t, err)
+
+	sampleID, err := docutil.CalculateID(sampleNamespace, createReq.SuffixData, sha2_256)
 	require.NoError(t, err)
 
 	t.Run("Create DID doc", func(t *testing.T) {
@@ -222,7 +225,6 @@ func getCreateRequest() ([]byte, error) {
 	}
 	return helper.NewCreateRequest(info)
 }
-
 
 const validDoc = `{
 	"publicKey": [{
