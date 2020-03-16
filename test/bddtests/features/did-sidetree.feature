@@ -41,3 +41,13 @@ Feature:
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check error response contains "document is no longer available"
+
+    @create_update_did_doc
+    Scenario: revoke valid did doc
+      When client sends request to create DID document "fixtures/config/didDocument.json"
+      Then check success response contains "#didDocumentHash"
+      Then we wait 1 seconds
+      When client sends request to update DID document path "/publicKey/0/type" with value "updatedValue"
+      Then we wait 1 seconds
+      When client sends request to resolve DID document
+      Then check success response contains "updatedValue"

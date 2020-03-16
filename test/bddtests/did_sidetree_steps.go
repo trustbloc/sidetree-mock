@@ -8,12 +8,14 @@ package bddtests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/cucumber/godog"
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -32,6 +34,7 @@ const (
 	initialValuesParam = ";initial-values="
 	sha2_256           = 18
 	recoveryOTP        = "recoveryOTP"
+	updateOTP          = "updateOTP"
 )
 
 // DIDSideSteps
@@ -62,6 +65,23 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 	}
 
 	d.createRequest = req
+
+	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	return err
+}
+
+func (d *DIDSideSteps) updateDIDDocument(path, value string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("update did document: %s", uniqueSuffix)
+
+	req, err := getUpdateRequest(uniqueSuffix, path, value)
+	if err != nil {
+		return err
+	}
 
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
@@ -156,6 +176,7 @@ func getCreateRequest(doc string) ([]byte, error) {
 		OpaqueDocument:  doc,
 		RecoveryKey:     "HEX",
 		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
+		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
 		MultihashCode:   sha2_256,
 	})
 }
@@ -187,6 +208,27 @@ func getRevokeRequest(did string) ([]byte, error) {
 	})
 }
 
+func getUpdateRequest(did, path, value string) ([]byte, error) {
+	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
+		DidUniqueSuffix: did,
+		UpdateOTP:       docutil.EncodeToString([]byte(updateOTP)),
+		Patch:           getUpdatePatch(path, value),
+		MultihashCode:   sha2_256,
+	})
+}
+
+func getUpdatePatch(path, value string) jsonpatch.Patch {
+	patchJSON := []byte(fmt.Sprintf(`[{"op": "replace", "path":  "%s", "value": "%s"}]`, path, value))
+	jsonPatch, err := jsonpatch.DecodePatch(patchJSON)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Infof("JSON Patch: %s", patchJSON)
+
+	return jsonPatch
+}
+
 func getOpaqueDocument(didDocumentPath, didID string) string {
 	r, _ := os.Open(didDocumentPath)
 	data, _ := ioutil.ReadAll(r)
@@ -214,6 +256,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to create DID document "([^"]*)"$`, d.createDIDDocument)
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessResp)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
+	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocument)
 	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
