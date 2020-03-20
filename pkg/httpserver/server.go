@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 )
@@ -33,10 +34,14 @@ func New(url string, handlers ...common.HTTPHandler) *Server {
 		logger.Infof("Registering handler for [%s]", handler.Path())
 		router.HandleFunc(handler.Path(), handler.Handler()).Methods(handler.Method())
 	}
+
+	// TODO configure cors
+	handler := cors.Default().Handler(router)
+
 	return &Server{
 		httpServer: &http.Server{
 			Addr:    url,
-			Handler: router,
+			Handler: handler,
 		},
 	}
 }
