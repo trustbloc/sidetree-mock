@@ -29,7 +29,7 @@ func TestStartObserver(t *testing.T) {
 			if key == "anchorAddress" {
 				return json.Marshal(&observer.AnchorFile{})
 			}
-			b, err := json.Marshal(batch.Operation{})
+			b, err := json.Marshal(batch.Operation{ID: "did:sidetree:1234"})
 			require.NoError(t, err)
 			return json.Marshal(&observer.BatchFile{Operations: []string{docutil.EncodeToString(b)}})
 		}}, mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
@@ -54,7 +54,7 @@ func TestStartObserver(t *testing.T) {
 	t.Run("test error from operationStore put", func(t *testing.T) {
 		err := operationStore{operationStoreClient: mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
 			return fmt.Errorf("put error")
-		}}}.Put([]*batchapi.Operation{&batch.Operation{Type: "1"}})
+		}}}.Put([]*batchapi.Operation{&batch.Operation{ID: "did:sidetree:1234", Type: "1"}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "put in operation store failed")
 	})
