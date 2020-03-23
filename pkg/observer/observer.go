@@ -71,5 +71,12 @@ func (o operationStore) Put(ops []*batchapi.Operation) error {
 
 // Start starts observer routines
 func Start(blockchainClient batch.BlockchainClient, cas batch.CASClient, operationStoreClient processor.OperationStoreClient) {
-	sidetreeobserver.Start(&ledger{blockChainClient: blockchainClient}, dcas{cas: cas}, operationStore{operationStoreClient: operationStoreClient})
+	providers := &sidetreeobserver.Providers{
+		Ledger:           &ledger{blockChainClient: blockchainClient},
+		DCASClient:       dcas{cas: cas},
+		OpStore:          operationStore{operationStoreClient: operationStoreClient},
+		OpFilterProvider: &sidetreeobserver.NoopOperationFilterProvider{},
+	}
+
+	sidetreeobserver.Start(providers)
 }
