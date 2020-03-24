@@ -73,8 +73,8 @@ endif
 generate-test-keys:
 	@mkdir -p -p test/bddtests/fixtures/keys/tls
 	@docker run -i --rm \
-		-v $(abspath .):/opt/go/src/github.com/trustbloc/sidetree-mock \
-		--entrypoint "/opt/go/src/github.com/trustbloc/sidetree-mock/scripts/generate_test_keys.sh" \
+		-v $(abspath .):/opt/workspace/sidetree-mock \
+		--entrypoint "/opt/workspace/sidetree-mock/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
 bddtests: generate-test-keys sidetree-docker

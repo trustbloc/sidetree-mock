@@ -23,6 +23,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -30,7 +31,7 @@ var logger = logrus.New()
 
 const (
 	didDocNamespace    = "did:sidetree:test"
-	testDocumentURL    = "http://localhost:48326/document"
+	testDocumentURL    = "https://localhost:48326/document"
 	initialValuesParam = ";initial-values="
 	sha2_256           = 18
 	recoveryOTP        = "recoveryOTP"

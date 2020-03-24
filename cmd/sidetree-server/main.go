@@ -76,6 +76,8 @@ func main() {
 
 	restSvc := httpserver.New(
 		getListenURL(),
+		config.GetString("tls.certificate"),
+		config.GetString("tls.key"),
 		diddochandler.NewUpdateHandler(basePath, didDocHandler),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
 	)

@@ -43,6 +43,8 @@ func TestServer_Start(t *testing.T) {
 	sampleDocHandler := mocks.NewMockDocumentHandler().WithNamespace(sampleNamespace)
 
 	s := New(url,
+		"",
+		"",
 		diddochandler.NewUpdateHandler(basePath, didDocHandler),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
 		newSampleUpdateHandler(sampleDocHandler),
