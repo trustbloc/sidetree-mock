@@ -104,6 +104,24 @@ func (d *DIDSideSteps) revokeDIDDocument() error {
 	return err
 }
 
+func (d *DIDSideSteps) recoverDIDDocument(didDocumentPath string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("recover did document from %s", didDocumentPath)
+
+	opaqueDoc := getOpaqueDocument(didDocumentPath, "")
+	req, err := getRecoverRequest(opaqueDoc, uniqueSuffix)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	return err
+}
+
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
@@ -175,6 +193,18 @@ func getCreateRequest(doc string) ([]byte, error) {
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:  doc,
 		RecoveryKey:     "HEX",
+		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
+		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
+		MultihashCode:   sha2_256,
+	})
+}
+
+func getRecoverRequest(doc, uniqueSuffix string) ([]byte, error) {
+	return helper.NewRecoverRequest(&helper.RecoverRequestInfo{
+		DidUniqueSuffix: uniqueSuffix,
+		OpaqueDocument:  doc,
+		RecoveryKey:     "HEX",
+		RecoveryOTP:     docutil.EncodeToString([]byte(recoveryOTP)),
 		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
 		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
 		MultihashCode:   sha2_256,
@@ -258,6 +288,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
 	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocument)
 	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
+	s.Step(`^client sends request to recover DID document "([^"]*)"$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
