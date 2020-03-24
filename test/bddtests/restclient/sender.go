@@ -8,6 +8,7 @@ package restclient
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,7 +31,12 @@ func SendRequest(url string, req []byte) (*HttpRespone, error) {
 
 // SendResolveRequest send a regular GET request to the sidetree-mock and expects 'side tree document' argument as a response
 func SendResolveRequest(url string) (*HttpRespone, error) {
-	client := &http.Client{}
+	client := &http.Client{
+		// TODO add tls config https://github.com/trustbloc/sidetree-mock/issues/131
+		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
+		}}
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
@@ -50,7 +56,12 @@ func handleHttpResp(resp *http.Response) (*HttpRespone, error) {
 }
 
 func sendHTTPRequest(url string, request []byte) (*http.Response, error) {
-	client := &http.Client{}
+	client := &http.Client{
+		// TODO add tls config https://github.com/trustbloc/sidetree-mock/issues/131
+		// TODO !!!!!!!remove InsecureSkipVerify after configure tls for http client
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint: gosec
+		}}
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(request))
 	if err != nil {
