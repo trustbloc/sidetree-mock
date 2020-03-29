@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -248,16 +247,8 @@ func getUpdateRequest(did, path, value string) ([]byte, error) {
 	})
 }
 
-func getUpdatePatch(path, value string) jsonpatch.Patch {
-	patchJSON := []byte(fmt.Sprintf(`[{"op": "replace", "path":  "%s", "value": "%s"}]`, path, value))
-	jsonPatch, err := jsonpatch.DecodePatch(patchJSON)
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Infof("JSON Patch: %s", patchJSON)
-
-	return jsonPatch
+func getUpdatePatch(path, value string) string {
+	return fmt.Sprintf(`[{"op": "replace", "path":  "%s", "value": "%s"}]`, path, value)
 }
 
 func getOpaqueDocument(didDocumentPath, didID string) string {
