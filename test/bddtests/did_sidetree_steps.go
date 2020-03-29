@@ -234,7 +234,7 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 func getRevokeRequest(did string) ([]byte, error) {
 	return helper.NewRevokeRequest(&helper.RevokeRequestInfo{
 		DidUniqueSuffix:     did,
-		RecoveryRevealValue: docutil.EncodeToString([]byte(recoveryRevealValue)),
+		RecoveryRevealValue: []byte(recoveryRevealValue),
 	})
 }
 
