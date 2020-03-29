@@ -29,12 +29,12 @@ import (
 var logger = logrus.New()
 
 const (
-	didDocNamespace    = "did:sidetree:test"
-	testDocumentURL    = "https://localhost:48326/document"
-	initialValuesParam = ";initial-values="
-	sha2_256           = 18
-	recoveryOTP        = "recoveryOTP"
-	updateOTP          = "updateOTP"
+	didDocNamespace     = "did:sidetree:test"
+	testDocumentURL     = "https://localhost:48326/document"
+	initialValuesParam  = ";initial-values="
+	sha2_256            = 18
+	recoveryRevealValue = "recoveryOTP"
+	updateRevealValue   = "updateOTP"
 )
 
 // DIDSideSteps
@@ -191,23 +191,23 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 
 func getCreateRequest(doc string) ([]byte, error) {
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
-		OpaqueDocument:  doc,
-		RecoveryKey:     "HEX",
-		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
-		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
-		MultihashCode:   sha2_256,
+		OpaqueDocument:          doc,
+		RecoveryKey:             "HEX",
+		NextRecoveryRevealValue: []byte(recoveryRevealValue),
+		NextUpdateRevealValue:   []byte(updateRevealValue),
+		MultihashCode:           sha2_256,
 	})
 }
 
 func getRecoverRequest(doc, uniqueSuffix string) ([]byte, error) {
 	return helper.NewRecoverRequest(&helper.RecoverRequestInfo{
-		DidUniqueSuffix: uniqueSuffix,
-		OpaqueDocument:  doc,
-		RecoveryKey:     "HEX",
-		RecoveryOTP:     docutil.EncodeToString([]byte(recoveryOTP)),
-		NextRecoveryOTP: docutil.EncodeToString([]byte(recoveryOTP)),
-		NextUpdateOTP:   docutil.EncodeToString([]byte(updateOTP)),
-		MultihashCode:   sha2_256,
+		DidUniqueSuffix:         uniqueSuffix,
+		OpaqueDocument:          doc,
+		RecoveryKey:             "HEX",
+		RecoveryRevealValue:     []byte(recoveryRevealValue),
+		NextRecoveryRevealValue: []byte(recoveryRevealValue),
+		NextUpdateRevealValue:   []byte(updateRevealValue),
+		MultihashCode:           sha2_256,
 	})
 }
 
@@ -233,17 +233,17 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 
 func getRevokeRequest(did string) ([]byte, error) {
 	return helper.NewRevokeRequest(&helper.RevokeRequestInfo{
-		DidUniqueSuffix: did,
-		RecoveryOTP:     docutil.EncodeToString([]byte(recoveryOTP)),
+		DidUniqueSuffix:     did,
+		RecoveryRevealValue: docutil.EncodeToString([]byte(recoveryRevealValue)),
 	})
 }
 
 func getUpdateRequest(did, path, value string) ([]byte, error) {
 	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
-		DidUniqueSuffix: did,
-		UpdateOTP:       docutil.EncodeToString([]byte(updateOTP)),
-		Patch:           getUpdatePatch(path, value),
-		MultihashCode:   sha2_256,
+		DidUniqueSuffix:   did,
+		UpdateRevealValue: []byte(updateRevealValue),
+		Patch:             getUpdatePatch(path, value),
+		MultihashCode:     sha2_256,
 	})
 }
 
