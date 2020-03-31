@@ -7,23 +7,35 @@ package observer
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
-	batchapi "github.com/trustbloc/sidetree-core-go/pkg/api/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/observer"
+	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
 
 func TestStartObserver(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
+		var rw sync.RWMutex
 		txNum := make(map[uint64]*struct{}, 0)
 		hits := 0
-		var rw sync.RWMutex
+
+		opStore := &mockOperationStoreClient{putFunc: func(ops []*batch.Operation) error {
+			rw.Lock()
+			defer rw.Unlock()
+
+			for _, op := range ops {
+				txNum[op.TransactionNumber] = nil
+				hits++
+			}
+
+			return nil
+		}}
+
 		Start(&mockBlockchainClient{readValue: []*observer.SidetreeTxn{{AnchorAddress: "anchorAddress", TransactionNumber: 0},
 			{AnchorAddress: "anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
@@ -32,13 +44,7 @@ func TestStartObserver(t *testing.T) {
 			b, err := json.Marshal(batch.Operation{ID: "did:sidetree:1234"})
 			require.NoError(t, err)
 			return json.Marshal(&observer.BatchFile{Operations: []string{docutil.EncodeToString(b)}})
-		}}, mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
-			rw.Lock()
-			txNum[ops.TransactionNumber] = nil
-			hits++
-			rw.Unlock()
-			return nil
-		}})
+		}}, mocks.NewMockOpStoreProvider(opStore))
 		time.Sleep(2000 * time.Millisecond)
 		rw.RLock()
 		require.Equal(t, 2, hits)
@@ -49,14 +55,6 @@ func TestStartObserver(t *testing.T) {
 		require.True(t, ok)
 		rw.RUnlock()
 
-	})
-
-	t.Run("test error from operationStore put", func(t *testing.T) {
-		err := operationStore{operationStoreClient: mockOperationStoreClient{putFunc: func(ops *batch.Operation) error {
-			return fmt.Errorf("put error")
-		}}}.Put([]*batchapi.Operation{&batch.Operation{ID: "did:sidetree:1234", Type: "1"}})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "put in operation store failed")
 	})
 }
 
@@ -92,16 +90,12 @@ func (m mockCASClient) Read(key string) ([]byte, error) {
 }
 
 type mockOperationStoreClient struct {
-	putFunc func(ops *batch.Operation) error
+	putFunc func(ops []*batch.Operation) error
 }
 
-func (m mockOperationStoreClient) Get(uniqueSuffix string) ([]*batch.Operation, error) {
-	return nil, nil
-}
-
-func (m mockOperationStoreClient) Put(op *batch.Operation) error {
+func (m mockOperationStoreClient) Put(ops []*batch.Operation) error {
 	if m.putFunc != nil {
-		return m.putFunc(op)
+		return m.putFunc(ops)
 	}
 	return nil
 }

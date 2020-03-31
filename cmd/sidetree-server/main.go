@@ -16,6 +16,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
@@ -24,6 +25,7 @@ import (
 
 	sidetreecontext "github.com/trustbloc/sidetree-mock/pkg/context"
 	"github.com/trustbloc/sidetree-mock/pkg/httpserver"
+	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 	"github.com/trustbloc/sidetree-mock/pkg/observer"
 )
 
@@ -40,7 +42,9 @@ func main() {
 
 	logger.Info("starting sidetree node...")
 
-	ctx, err := sidetreecontext.New(config)
+	opStore := mocks.NewMockOperationStore()
+
+	ctx, err := sidetreecontext.New(opStore)
 	if err != nil {
 		logger.Errorf("Failed to create new context: %s", err.Error())
 		panic(err)
@@ -63,7 +67,7 @@ func main() {
 	batchWriter.Start()
 
 	// start observer
-	observer.Start(ctx.Blockchain(), ctx.CAS(), ctx.OperationStore())
+	observer.Start(ctx.Blockchain(), ctx.CAS(), mocks.NewMockOpStoreProvider(opStore))
 
 	// did document handler with did document validator for didDocNamespace
 	didDocHandler := dochandler.New(

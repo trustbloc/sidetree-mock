@@ -8,12 +8,10 @@ package observer
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	batchapi "github.com/trustbloc/sidetree-core-go/pkg/api/batch"
+
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	sidetreeobserver "github.com/trustbloc/sidetree-core-go/pkg/observer"
-	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 )
 
 var logger = logrus.New()
@@ -56,27 +54,14 @@ func (d dcas) Read(key string) ([]byte, error) {
 	return d.cas.Read(key)
 }
 
-type operationStore struct {
-	operationStoreClient processor.OperationStoreClient
-}
-
-func (o operationStore) Put(ops []*batchapi.Operation) error {
-	for _, op := range ops {
-		if err := o.operationStoreClient.Put(op); err != nil {
-			return errors.Wrap(err, "put in operation store failed")
-		}
-	}
-	return nil
-}
-
 // Start starts observer routines
-func Start(blockchainClient batch.BlockchainClient, cas batch.CASClient, operationStoreClient processor.OperationStoreClient) {
+func Start(blockchainClient batch.BlockchainClient, cas batch.CASClient, operationStoreProvider sidetreeobserver.OperationStoreProvider) {
 	providers := &sidetreeobserver.Providers{
 		Ledger:           &ledger{blockChainClient: blockchainClient},
 		DCASClient:       dcas{cas: cas},
-		OpStore:          operationStore{operationStoreClient: operationStoreClient},
+		OpStoreProvider:  operationStoreProvider,
 		OpFilterProvider: &sidetreeobserver.NoopOperationFilterProvider{},
 	}
 
-	sidetreeobserver.Start(providers)
+	sidetreeobserver.New(providers).Start()
 }
