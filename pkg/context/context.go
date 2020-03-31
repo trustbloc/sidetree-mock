@@ -7,28 +7,25 @@ SPDX-License-Identifier: Apache-2.0
 package context
 
 import (
-	"github.com/spf13/viper"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch/cutter"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch/opqueue"
-	"github.com/trustbloc/sidetree-core-go/pkg/processor"
-
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
+	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 
 	servermocks "github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
 
-func New(cfg *viper.Viper) (*ServerContext, error) { // nolint
+func New(opStoreClient processor.OperationStoreClient) (*ServerContext, error) { // nolint
 
-	opsStore := mocks.NewMockOperationStore(nil)
 	cas := servermocks.NewMockCasClient(nil)
 
 	ctx := &ServerContext{
 		ProtocolClient:       servermocks.NewMockProtocolClient(),
 		CasClient:            cas,
 		BlockchainClient:     mocks.NewMockBlockchainClient(nil),
-		OperationStoreClient: opsStore,
+		OperationStoreClient: opStoreClient,
 		OpQueue:              &opqueue.MemQueue{},
 	}
 
@@ -41,7 +38,7 @@ type ServerContext struct {
 	ProtocolClient       *servermocks.MockProtocolClient
 	CasClient            *servermocks.MockCasClient
 	BlockchainClient     *mocks.MockBlockchainClient
-	OperationStoreClient *mocks.MockOperationStore
+	OperationStoreClient processor.OperationStoreClient
 	OpQueue              *opqueue.MemQueue
 }
 
