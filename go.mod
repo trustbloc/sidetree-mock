@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.4.0
-	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200331141546-1d1a08ef4a77
+	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200402123953-6255bfc8de85
 )
 
 go 1.13
