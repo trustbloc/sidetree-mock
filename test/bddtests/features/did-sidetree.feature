@@ -8,13 +8,6 @@
 @did-sidetree
 Feature:
 
-  @create_invalid_did_doc
-  Scenario: create invalid doc
-    When client sends request to create DID document "fixtures/config/didDocument.json" with ID "did:sidetree:123"
-    Then check error response contains "document must NOT have the id property"
-    When client sends request to resolve DID document "fixtures/config/didDocument.json" with ID "did:sidetree:abc"
-    Then check error response contains "document must NOT have the id property"
-
   @create_valid_did_doc
   Scenario: create valid did doc
     When client sends request to create DID document "fixtures/config/didDocument.json"
@@ -55,7 +48,7 @@ Feature:
     Then check success response contains "recoveryKey"
 
     @create_update_did_doc
-    Scenario: revoke valid did doc
+    Scenario: update valid did doc
       When client sends request to create DID document "fixtures/config/didDocument.json"
       Then check success response contains "#didDocumentHash"
       Then we wait 1 seconds
@@ -63,3 +56,17 @@ Feature:
       Then we wait 1 seconds
       When client sends request to resolve DID document
       Then check success response contains "updatedValue"
+
+    @create_add_remove_public_key
+    Scenario: add and remove public keys
+      When client sends request to create DID document "fixtures/config/didDocument.json"
+      Then check success response contains "#didDocumentHash"
+      Then we wait 1 seconds
+      When client sends request to add public key with ID "newKey" to DID document
+      Then we wait 1 seconds
+      When client sends request to resolve DID document
+      Then check success response contains "newKey"
+      When client sends request to remove public key with ID "newKey" from DID document
+      Then we wait 1 seconds
+      When client sends request to resolve DID document
+      Then check success response does NOT contain "newKey"

@@ -9,6 +9,7 @@ package bddtests
 import (
 	"encoding/json"
 	"fmt"
+
 	"io/ioutil"
 	"os"
 	"strings"
@@ -20,9 +21,9 @@ import (
 
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
+	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
-
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -36,6 +37,17 @@ const (
 	recoveryRevealValue = "recoveryOTP"
 	updateRevealValue   = "updateOTP"
 )
+
+const addPublicKeysTemplate = `[
+	{
+      "id": "%s",
+      "usage": ["ops"],
+      "type": "Secp256k1VerificationKey2018",
+      "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71"
+    }
+  ]`
+
+const removePublicKeysTemplate = `["%s"]`
 
 // DIDSideSteps
 type DIDSideSteps struct {
@@ -78,7 +90,12 @@ func (d *DIDSideSteps) updateDIDDocument(path, value string) error {
 
 	logger.Infof("update did document: %s", uniqueSuffix)
 
-	req, err := getUpdateRequest(uniqueSuffix, path, value)
+	patch, err := getJSONPatch(path, value)
+	if err != nil {
+		return err
+	}
+
+	req, err := getUpdateRequest(uniqueSuffix, patch)
 	if err != nil {
 		return err
 	}
@@ -122,6 +139,50 @@ func (d *DIDSideSteps) recoverDIDDocument(didDocumentPath string) error {
 	return err
 }
 
+func (d *DIDSideSteps) addPublicKeyToDIDDocument(keyID string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("add public key to did document: %s", uniqueSuffix)
+
+	patch, err := getAddPublicKeysPatch(keyID)
+	if err != nil {
+		return err
+	}
+
+	req, err := getUpdateRequest(uniqueSuffix, patch)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	return err
+}
+
+func (d *DIDSideSteps) removePublicKeyFromDIDDocument(keyID string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("remove public key '%s' from did document: %s", keyID, uniqueSuffix)
+
+	patch, err := getRemovePublicKeysPatch(keyID)
+	if err != nil {
+		return err
+	}
+
+	req, err := getUpdateRequest(uniqueSuffix, patch)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	return err
+}
+
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
@@ -137,7 +198,15 @@ func (d *DIDSideSteps) checkErrorResp(errorMsg string) error {
 	return nil
 }
 
-func (d *DIDSideSteps) checkSuccessResp(msg string) error {
+func (d *DIDSideSteps) checkSuccessRespContains(msg string) error {
+	return d.checkSuccessResp(msg, true)
+}
+
+func (d *DIDSideSteps) checkSuccessRespDoesntContain(msg string) error {
+	return d.checkSuccessResp(msg, false)
+}
+
+func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 	if d.resp.ErrorMsg != "" {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
@@ -162,9 +231,18 @@ func (d *DIDSideSteps) checkSuccessResp(msg string) error {
 		logger.Infof("response is a valid did document")
 	}
 
-	logger.Infof("check success resp %s contain %s", string(d.resp.Payload), msg)
-	if !strings.Contains(string(d.resp.Payload), msg) {
+	action := " "
+	if !contains {
+		action = " NOT"
+	}
+
+	logger.Infof("check success resp %s MUST%s contain %s", string(d.resp.Payload), action, msg)
+	if contains && !strings.Contains(string(d.resp.Payload), msg) {
 		return errors.Errorf("success resp %s doesn't contain %s", d.resp.Payload, msg)
+	}
+
+	if !contains && strings.Contains(string(d.resp.Payload), msg) {
+		return errors.Errorf("success resp %s should NOT contain %s", d.resp.Payload, msg)
 	}
 	return nil
 }
@@ -238,17 +316,32 @@ func getRevokeRequest(did string) ([]byte, error) {
 	})
 }
 
-func getUpdateRequest(did, path, value string) ([]byte, error) {
+func getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
 	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
-		DidUniqueSuffix:   did,
-		UpdateRevealValue: []byte(updateRevealValue),
-		Patch:             getUpdatePatch(path, value),
-		MultihashCode:     sha2_256,
+		DidUniqueSuffix:       did,
+		UpdateRevealValue:     []byte(updateRevealValue),
+		NextUpdateRevealValue: []byte(updateRevealValue),
+		Patch:                 updatePatch,
+		MultihashCode:         sha2_256,
 	})
 }
 
-func getUpdatePatch(path, value string) string {
-	return fmt.Sprintf(`[{"op": "replace", "path":  "%s", "value": "%s"}]`, path, value)
+func getJSONPatch(path, value string) (patch.Patch, error) {
+	patches := fmt.Sprintf(`[{"op": "replace", "path":  "%s", "value": "%s"}]`, path, value)
+	logger.Infof("creating JSON patch: %s", patches)
+	return patch.NewJSONPatch(patches)
+}
+
+func getAddPublicKeysPatch(keyID string) (patch.Patch, error) {
+	addPubKeys := fmt.Sprintf(addPublicKeysTemplate, keyID)
+	logger.Infof("creating add public keys patch: %s", addPubKeys)
+	return patch.NewAddPublicKeysPatch(addPubKeys)
+}
+
+func getRemovePublicKeysPatch(keyID string) (patch.Patch, error) {
+	removePubKeys := fmt.Sprintf(removePublicKeysTemplate, keyID)
+	logger.Infof("creating remove public keys patch: %s", removePubKeys)
+	return patch.NewRemovePublicKeysPatch(removePubKeys)
 }
 
 func getOpaqueDocument(didDocumentPath, didID string) string {
@@ -276,9 +369,12 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to resolve DID document "([^"]*)" with ID "([^"]*)"$`, d.resolveDIDDocumentWithID)
 	s.Step(`^check error response contains "([^"]*)"$`, d.checkErrorResp)
 	s.Step(`^client sends request to create DID document "([^"]*)"$`, d.createDIDDocument)
-	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessResp)
+	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessRespContains)
+	s.Step(`^check success response does NOT contain "([^"]*)"$`, d.checkSuccessRespDoesntContain)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
 	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocument)
+	s.Step(`^client sends request to add public key with ID "([^"]*)" to DID document$`, d.addPublicKeyToDIDDocument)
+	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
 	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
 	s.Step(`^client sends request to recover DID document "([^"]*)"$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
