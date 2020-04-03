@@ -9,7 +9,6 @@ package bddtests
 import (
 	"encoding/json"
 	"fmt"
-
 	"io/ioutil"
 	"os"
 	"strings"
@@ -49,6 +48,16 @@ const addPublicKeysTemplate = `[
 
 const removePublicKeysTemplate = `["%s"]`
 
+const addServicesTemplate = `[
+    {
+      "id": "%s",
+      "type": "SecureDataStore",
+      "serviceEndpoint": "http://hub.my-personal-server.com"
+    }
+  ]`
+
+const removeServicesTemplate = `["%s"]`
+
 // DIDSideSteps
 type DIDSideSteps struct {
 	createRequest []byte
@@ -82,18 +91,13 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 	return err
 }
 
-func (d *DIDSideSteps) updateDIDDocument(path, value string) error {
+func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
 	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return err
 	}
 
 	logger.Infof("update did document: %s", uniqueSuffix)
-
-	patch, err := getJSONPatch(path, value)
-	if err != nil {
-		return err
-	}
 
 	req, err := getUpdateRequest(uniqueSuffix, patch)
 	if err != nil {
@@ -139,48 +143,49 @@ func (d *DIDSideSteps) recoverDIDDocument(didDocumentPath string) error {
 	return err
 }
 
-func (d *DIDSideSteps) addPublicKeyToDIDDocument(keyID string) error {
-	uniqueSuffix, err := d.getUniqueSuffix()
+func (d *DIDSideSteps) updateDIDDocumentWithJSONPatch(path, value string) error {
+	patch, err := getJSONPatch(path, value)
 	if err != nil {
 		return err
 	}
 
-	logger.Infof("add public key to did document: %s", uniqueSuffix)
+	return d.updateDIDDocument(patch)
+}
 
+func (d *DIDSideSteps) addPublicKeyToDIDDocument(keyID string) error {
 	patch, err := getAddPublicKeysPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	req, err := getUpdateRequest(uniqueSuffix, patch)
-	if err != nil {
-		return err
-	}
-
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
-	return err
+	return d.updateDIDDocument(patch)
 }
 
 func (d *DIDSideSteps) removePublicKeyFromDIDDocument(keyID string) error {
-	uniqueSuffix, err := d.getUniqueSuffix()
-	if err != nil {
-		return err
-	}
-
-	logger.Infof("remove public key '%s' from did document: %s", keyID, uniqueSuffix)
-
 	patch, err := getRemovePublicKeysPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	req, err := getUpdateRequest(uniqueSuffix, patch)
+	return d.updateDIDDocument(patch)
+}
+
+func (d *DIDSideSteps) addServiceEndpointToDIDDocument(keyID string) error {
+	patch, err := getAddServiceEndpointsPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
-	return err
+	return d.updateDIDDocument(patch)
+}
+
+func (d *DIDSideSteps) removeServiceEndpointsFromDIDDocument(keyID string) error {
+	patch, err := getRemoveServiceEndpointsPatch(keyID)
+	if err != nil {
+		return err
+	}
+
+	return d.updateDIDDocument(patch)
 }
 
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) error {
@@ -344,6 +349,18 @@ func getRemovePublicKeysPatch(keyID string) (patch.Patch, error) {
 	return patch.NewRemovePublicKeysPatch(removePubKeys)
 }
 
+func getAddServiceEndpointsPatch(svcID string) (patch.Patch, error) {
+	addServices := fmt.Sprintf(addServicesTemplate, svcID)
+	logger.Infof("creating add service endpoints patch: %s", addServices)
+	return patch.NewAddServiceEndpointsPatch(addServices)
+}
+
+func getRemoveServiceEndpointsPatch(keyID string) (patch.Patch, error) {
+	removeServices := fmt.Sprintf(removeServicesTemplate, keyID)
+	logger.Infof("creating remove service endpoints patch: %s", removeServices)
+	return patch.NewRemoveServiceEndpointsPatch(removeServices)
+}
+
 func getOpaqueDocument(didDocumentPath, didID string) string {
 	r, _ := os.Open(didDocumentPath)
 	data, _ := ioutil.ReadAll(r)
@@ -372,9 +389,11 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessRespContains)
 	s.Step(`^check success response does NOT contain "([^"]*)"$`, d.checkSuccessRespDoesntContain)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
-	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocument)
+	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocumentWithJSONPatch)
 	s.Step(`^client sends request to add public key with ID "([^"]*)" to DID document$`, d.addPublicKeyToDIDDocument)
 	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
+	s.Step(`^client sends request to add service endpoint with ID "([^"]*)" to DID document$`, d.addServiceEndpointToDIDDocument)
+	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
 	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
 	s.Step(`^client sends request to recover DID document "([^"]*)"$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
