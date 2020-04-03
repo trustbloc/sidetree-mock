@@ -70,3 +70,17 @@ Feature:
       Then we wait 1 seconds
       When client sends request to resolve DID document
       Then check success response does NOT contain "newKey"
+
+    @create_add_remove_services
+    Scenario: add and remove service endpoints
+      When client sends request to create DID document "fixtures/config/didDocument.json"
+      Then check success response contains "#didDocumentHash"
+      Then we wait 1 seconds
+      When client sends request to add service endpoint with ID "newService" to DID document
+      Then we wait 1 seconds
+      When client sends request to resolve DID document
+      Then check success response contains "newService"
+      When client sends request to remove service endpoint with ID "newService" from DID document
+      Then we wait 1 seconds
+      When client sends request to resolve DID document
+      Then check success response does NOT contain "newService"
