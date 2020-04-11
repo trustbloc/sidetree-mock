@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package bddtests
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,6 +26,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+	"github.com/trustbloc/sidetree-core-go/pkg/util"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -60,9 +64,10 @@ const removeServicesTemplate = `["%s"]`
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	createRequest []byte
-	resp          *restclient.HttpRespone
-	bddContext    *BDDContext
+	createRequest     []byte
+	recoveryKeySigner helper.Signer
+	resp              *restclient.HttpRespone
+	bddContext        *BDDContext
 }
 
 // NewDIDSideSteps
@@ -80,7 +85,7 @@ func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) er
 	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
 
 	opaqueDoc := getOpaqueDocument(didDocumentPath, didID)
-	req, err := getCreateRequest(opaqueDoc)
+	req, err := d.getCreateRequest(opaqueDoc)
 	if err != nil {
 		return err
 	}
@@ -99,7 +104,7 @@ func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
 
 	logger.Infof("update did document: %s", uniqueSuffix)
 
-	req, err := getUpdateRequest(uniqueSuffix, patch)
+	req, err := d.getUpdateRequest(uniqueSuffix, patch)
 	if err != nil {
 		return err
 	}
@@ -116,7 +121,7 @@ func (d *DIDSideSteps) revokeDIDDocument() error {
 
 	logger.Infof("revoke did document: %s", uniqueSuffix)
 
-	req, err := getRevokeRequest(uniqueSuffix)
+	req, err := d.getRevokeRequest(uniqueSuffix)
 	if err != nil {
 		return err
 	}
@@ -134,7 +139,7 @@ func (d *DIDSideSteps) recoverDIDDocument(didDocumentPath string) error {
 	logger.Infof("recover did document from %s", didDocumentPath)
 
 	opaqueDoc := getOpaqueDocument(didDocumentPath, "")
-	req, err := getRecoverRequest(opaqueDoc, uniqueSuffix)
+	req, err := d.getRecoverRequest(opaqueDoc, uniqueSuffix)
 	if err != nil {
 		return err
 	}
@@ -272,26 +277,61 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	return err
 }
 
-func getCreateRequest(doc string) ([]byte, error) {
+func (d *DIDSideSteps) getCreateRequest(doc string) ([]byte, error) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	d.recoveryKeySigner = util.NewECDSASigner(privateKey, "ES256", "recovery")
+	if err != nil {
+		return nil, err
+	}
+
+	recoveryPublicKey, err := util.GetECPublicKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:          doc,
-		RecoveryKey:             "HEX",
+		RecoveryKey:             recoveryPublicKey,
 		NextRecoveryRevealValue: []byte(recoveryRevealValue),
 		NextUpdateRevealValue:   []byte(updateRevealValue),
 		MultihashCode:           sha2_256,
 	})
 }
 
-func getRecoverRequest(doc, uniqueSuffix string) ([]byte, error) {
-	return helper.NewRecoverRequest(&helper.RecoverRequestInfo{
+func (d *DIDSideSteps) getRecoverRequest(doc, uniqueSuffix string) ([]byte, error) {
+	newPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	newRecoveryPublicKey, err := util.GetECPublicKey(newPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	recoverRequest, err := helper.NewRecoverRequest(&helper.RecoverRequestInfo{
 		DidUniqueSuffix:         uniqueSuffix,
 		OpaqueDocument:          doc,
-		RecoveryKey:             "HEX",
+		RecoveryKey:             newRecoveryPublicKey,
 		RecoveryRevealValue:     []byte(recoveryRevealValue),
 		NextRecoveryRevealValue: []byte(recoveryRevealValue),
 		NextUpdateRevealValue:   []byte(updateRevealValue),
 		MultihashCode:           sha2_256,
+		Signer:                  d.recoveryKeySigner, // sign with old signer
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// update recovery key singer for subsequent requests
+	d.recoveryKeySigner = util.NewECDSASigner(newPrivateKey, "ES256", "recovery")
+
+	return recoverRequest, nil
 }
 
 func (d *DIDSideSteps) getDID() (string, error) {
@@ -314,20 +354,24 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 	return docutil.CalculateUniqueSuffix(createReq.SuffixData, sha2_256)
 }
 
-func getRevokeRequest(did string) ([]byte, error) {
+func (d *DIDSideSteps) getRevokeRequest(did string) ([]byte, error) {
 	return helper.NewRevokeRequest(&helper.RevokeRequestInfo{
 		DidUniqueSuffix:     did,
 		RecoveryRevealValue: []byte(recoveryRevealValue),
+		Signer:              d.recoveryKeySigner,
 	})
 }
 
-func getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
+func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
+	// TODO: Use key from did to sign update request; use recovery for now
+
 	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
 		DidUniqueSuffix:       did,
 		UpdateRevealValue:     []byte(updateRevealValue),
 		NextUpdateRevealValue: []byte(updateRevealValue),
 		Patch:                 updatePatch,
 		MultihashCode:         sha2_256,
+		Signer:                d.recoveryKeySigner,
 	})
 }
 

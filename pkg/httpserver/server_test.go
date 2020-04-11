@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -222,7 +223,7 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 func getCreateRequest() ([]byte, error) {
 	info := &helper.CreateRequestInfo{
 		OpaqueDocument: validDoc,
-		RecoveryKey:    "recoveryKey",
+		RecoveryKey:    &jws.JWK{},
 		MultihashCode:  sha2_256,
 	}
 	return helper.NewCreateRequest(info)
