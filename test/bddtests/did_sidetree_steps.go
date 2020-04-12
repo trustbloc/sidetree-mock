@@ -12,8 +12,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 	"time"
 
@@ -62,10 +60,34 @@ const addServicesTemplate = `[
 
 const removeServicesTemplate = `["%s"]`
 
+const docTemplate = `{
+  "publicKey": [
+	{
+  		"id": "%s",
+  		"type": "JwsVerificationKey2020",
+		"usage": ["ops"],
+  		"publicKeyJwk": %s
+	}
+  ],
+  "service": [
+	{
+	   "id": "did:example:123456789abcdefghi#oidc",
+	   "type": "OpenIdConnectVersion1.0Service",
+	   "serviceEndpoint": "https://openid.example.com/"
+	}, 
+	{
+	   "id": "did:example:123456789abcdefghi#hub",
+	   "type": "HubService",
+	   "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
+	}
+  ]
+}`
+
 // DIDSideSteps
 type DIDSideSteps struct {
 	createRequest     []byte
 	recoveryKeySigner helper.Signer
+	updateKeySigner   helper.Signer
 	resp              *restclient.HttpRespone
 	bddContext        *BDDContext
 }
@@ -75,16 +97,16 @@ func NewDIDSideSteps(context *BDDContext) *DIDSideSteps {
 	return &DIDSideSteps{bddContext: context}
 }
 
-func (d *DIDSideSteps) createDIDDocument(didDocumentPath string) error {
-	return d.createDIDDocumentWithID(didDocumentPath, "")
-}
-
-func (d *DIDSideSteps) createDIDDocumentWithID(didDocumentPath, didID string) error {
+func (d *DIDSideSteps) createDIDDocument() error {
 	var err error
 
-	logger.Infof("create did document %s with didID %s", didDocumentPath, didID)
+	logger.Info("create did document")
 
-	opaqueDoc := getOpaqueDocument(didDocumentPath, didID)
+	opaqueDoc, err := d.getOpaqueDocument("#key1")
+	if err != nil {
+		return err
+	}
+
 	req, err := d.getCreateRequest(opaqueDoc)
 	if err != nil {
 		return err
@@ -130,15 +152,19 @@ func (d *DIDSideSteps) revokeDIDDocument() error {
 	return err
 }
 
-func (d *DIDSideSteps) recoverDIDDocument(didDocumentPath string) error {
+func (d *DIDSideSteps) recoverDIDDocument() error {
 	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return err
 	}
 
-	logger.Infof("recover did document from %s", didDocumentPath)
+	logger.Infof("recover did document")
 
-	opaqueDoc := getOpaqueDocument(didDocumentPath, "")
+	opaqueDoc, err := d.getOpaqueDocument("#recoveryKey")
+	if err != nil {
+		return err
+	}
+
 	req, err := d.getRecoverRequest(opaqueDoc, uniqueSuffix)
 	if err != nil {
 		return err
@@ -193,9 +219,9 @@ func (d *DIDSideSteps) removeServiceEndpointsFromDIDDocument(keyID string) error
 	return d.updateDIDDocument(patch)
 }
 
-func (d *DIDSideSteps) resolveDIDDocumentWithID(didDocumentPath, didID string) error {
+func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
-	logger.Infof("resolve did document %s with initial value %s", didDocumentPath, didID)
+	logger.Infof("resolve did document %s with initial value", didID)
 
 	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + docutil.EncodeToString(d.createRequest))
 	return err
@@ -277,7 +303,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	return err
 }
 
-func (d *DIDSideSteps) getCreateRequest(doc string) ([]byte, error) {
+func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -294,7 +320,7 @@ func (d *DIDSideSteps) getCreateRequest(doc string) ([]byte, error) {
 	}
 
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
-		OpaqueDocument:          doc,
+		OpaqueDocument:          string(doc),
 		RecoveryKey:             recoveryPublicKey,
 		NextRecoveryRevealValue: []byte(recoveryRevealValue),
 		NextUpdateRevealValue:   []byte(updateRevealValue),
@@ -302,7 +328,7 @@ func (d *DIDSideSteps) getCreateRequest(doc string) ([]byte, error) {
 	})
 }
 
-func (d *DIDSideSteps) getRecoverRequest(doc, uniqueSuffix string) ([]byte, error) {
+func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byte, error) {
 	newPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -315,7 +341,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc, uniqueSuffix string) ([]byte, erro
 
 	recoverRequest, err := helper.NewRecoverRequest(&helper.RecoverRequestInfo{
 		DidUniqueSuffix:         uniqueSuffix,
-		OpaqueDocument:          doc,
+		OpaqueDocument:          string(doc),
 		RecoveryKey:             newRecoveryPublicKey,
 		RecoveryRevealValue:     []byte(recoveryRevealValue),
 		NextRecoveryRevealValue: []byte(recoveryRevealValue),
@@ -363,15 +389,13 @@ func (d *DIDSideSteps) getRevokeRequest(did string) ([]byte, error) {
 }
 
 func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
-	// TODO: Use key from did to sign update request; use recovery for now
-
 	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
 		DidUniqueSuffix:       did,
 		UpdateRevealValue:     []byte(updateRevealValue),
 		NextUpdateRevealValue: []byte(updateRevealValue),
 		Patch:                 updatePatch,
 		MultihashCode:         sha2_256,
-		Signer:                d.recoveryKeySigner,
+		Signer:                d.updateKeySigner,
 	})
 }
 
@@ -405,17 +429,34 @@ func getRemoveServiceEndpointsPatch(keyID string) (patch.Patch, error) {
 	return patch.NewRemoveServiceEndpointsPatch(removeServices)
 }
 
-func getOpaqueDocument(didDocumentPath, didID string) string {
-	r, _ := os.Open(didDocumentPath)
-	data, _ := ioutil.ReadAll(r)
-	doc, _ := document.FromBytes(data)
-	if didID != "" {
-		doc["id"] = didID
+func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
+	// generate private key that will be used for document updates and
+	// insert public key that correspond to this private key into document (JWK format)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
 	}
-	// add new key to make the document unique
-	doc["unique"] = generateUUID()
-	bytes, _ := doc.Bytes()
-	return string(bytes)
+
+	publicKey, err := util.GetECPublicKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKeyBytes, err := json.Marshal(publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	data := fmt.Sprintf(docTemplate, keyID, string(publicKeyBytes))
+
+	doc, err := document.FromBytes([]byte(data))
+	if err != nil {
+		return nil, err
+	}
+
+	d.updateKeySigner = util.NewECDSASigner(privateKey, "ES256", keyID)
+
+	return doc.Bytes()
 }
 
 func wait(seconds int) error {
@@ -426,10 +467,8 @@ func wait(seconds int) error {
 
 // RegisterSteps registers did sidetree steps
 func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
-	s.Step(`^client sends request to create DID document "([^"]*)" with ID "([^"]*)"$`, d.createDIDDocumentWithID)
-	s.Step(`^client sends request to resolve DID document "([^"]*)" with ID "([^"]*)"$`, d.resolveDIDDocumentWithID)
 	s.Step(`^check error response contains "([^"]*)"$`, d.checkErrorResp)
-	s.Step(`^client sends request to create DID document "([^"]*)"$`, d.createDIDDocument)
+	s.Step(`^client sends request to create DID document$`, d.createDIDDocument)
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessRespContains)
 	s.Step(`^check success response does NOT contain "([^"]*)"$`, d.checkSuccessRespDoesntContain)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
@@ -439,7 +478,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to add service endpoint with ID "([^"]*)" to DID document$`, d.addServiceEndpointToDIDDocument)
 	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
 	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
-	s.Step(`^client sends request to recover DID document "([^"]*)"$`, d.recoverDIDDocument)
+	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }

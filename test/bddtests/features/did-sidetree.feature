@@ -10,7 +10,7 @@ Feature:
 
   @create_valid_did_doc
   Scenario: create valid did doc
-    When client sends request to create DID document "fixtures/config/didDocument.json"
+    When client sends request to create DID document
     Then check success response contains "#didDocumentHash"
     # retrieve document with initial value before it becomes available on the ledger
     When client sends request to resolve DID document with initial value
@@ -25,7 +25,7 @@ Feature:
 
   @create_revoke_did_doc
   Scenario: revoke valid did doc
-    When client sends request to create DID document "fixtures/config/didDocument.json"
+    When client sends request to create DID document
     Then check success response contains "#didDocumentHash"
     Then we wait 1 seconds
     When client sends request to resolve DID document
@@ -37,19 +37,19 @@ Feature:
 
   @create_recover_did_doc
   Scenario: recover did doc
-    When client sends request to create DID document "fixtures/config/didDocument.json"
+    When client sends request to create DID document
     Then check success response contains "#didDocumentHash"
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#didDocumentHash"
-    When client sends request to recover DID document "fixtures/config/recover.json"
+    When client sends request to recover DID document
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "recoveryKey"
 
     @create_update_did_doc
     Scenario: update valid did doc
-      When client sends request to create DID document "fixtures/config/didDocument.json"
+      When client sends request to create DID document
       Then check success response contains "#didDocumentHash"
       Then we wait 1 seconds
       When client sends request to update DID document path "/publicKey/0/type" with value "updatedValue"
@@ -59,7 +59,7 @@ Feature:
 
     @create_add_remove_public_key
     Scenario: add and remove public keys
-      When client sends request to create DID document "fixtures/config/didDocument.json"
+      When client sends request to create DID document
       Then check success response contains "#didDocumentHash"
       Then we wait 1 seconds
       When client sends request to add public key with ID "newKey" to DID document
@@ -73,7 +73,7 @@ Feature:
 
     @create_add_remove_services
     Scenario: add and remove service endpoints
-      When client sends request to create DID document "fixtures/config/didDocument.json"
+      When client sends request to create DID document
       Then check success response contains "#didDocumentHash"
       Then we wait 1 seconds
       When client sends request to add service endpoint with ID "newService" to DID document
