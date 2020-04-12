@@ -23,7 +23,7 @@ func NewMockProtocolClient() *MockProtocolClient {
 			StartingBlockChainTime:       0,
 			HashAlgorithmInMultiHashCode: 18,
 			MaxOperationsPerBatch:        1, // one operation per batch - batch gets cut right away
-			MaxOperationByteSize:         2000,
+			MaxOperationByteSize:         200000,
 		},
 	}
 
