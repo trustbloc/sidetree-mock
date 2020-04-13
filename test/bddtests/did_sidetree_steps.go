@@ -24,7 +24,8 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
-	"github.com/trustbloc/sidetree-core-go/pkg/util"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/ecsigner"
+	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -309,12 +310,12 @@ func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	d.recoveryKeySigner = util.NewECDSASigner(privateKey, "ES256", "recovery")
+	d.recoveryKeySigner = ecsigner.New(privateKey, "ES256", "recovery")
 	if err != nil {
 		return nil, err
 	}
 
-	recoveryPublicKey, err := util.GetECPublicKey(privateKey)
+	recoveryPublicKey, err := pubkey.GetPublicKeyJWK(&privateKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +335,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 		return nil, err
 	}
 
-	newRecoveryPublicKey, err := util.GetECPublicKey(newPrivateKey)
+	newRecoveryPublicKey, err := pubkey.GetPublicKeyJWK(&newPrivateKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +356,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 	}
 
 	// update recovery key singer for subsequent requests
-	d.recoveryKeySigner = util.NewECDSASigner(newPrivateKey, "ES256", "recovery")
+	d.recoveryKeySigner = ecsigner.New(newPrivateKey, "ES256", "recovery")
 
 	return recoverRequest, nil
 }
@@ -437,7 +438,7 @@ func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 		return nil, err
 	}
 
-	publicKey, err := util.GetECPublicKey(privateKey)
+	publicKey, err := pubkey.GetPublicKeyJWK(&privateKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +455,7 @@ func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 		return nil, err
 	}
 
-	d.updateKeySigner = util.NewECDSASigner(privateKey, "ES256", keyID)
+	d.updateKeySigner = ecsigner.New(privateKey, "ES256", keyID)
 
 	return doc.Bytes()
 }
