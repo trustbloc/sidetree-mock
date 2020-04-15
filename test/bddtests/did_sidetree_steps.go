@@ -43,7 +43,7 @@ const (
 const addPublicKeysTemplate = `[
 	{
       "id": "%s",
-      "usage": ["ops"],
+      "usage": ["ops", "general"],
       "type": "Secp256k1VerificationKey2018",
       "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71"
     }
@@ -66,18 +66,29 @@ const docTemplate = `{
 	{
   		"id": "%s",
   		"type": "JwsVerificationKey2020",
-		"usage": ["ops"],
+		"usage": ["ops", "general"],
   		"publicKeyJwk": %s
-	}
+	},
+    {
+      "id": "dual-key",
+      "type": "JwsVerificationKey2020",
+      "usage": ["auth", "general"],
+      "publicKeyJwk": {
+        "kty": "EC",
+        "crv": "P-256K",
+        "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
+        "y": "nM84jDHCMOTGTh_ZdHq4dBBdo4Z5PkEOW9jA8z8IsGc"
+      }
+    }
   ],
   "service": [
 	{
-	   "id": "did:example:123456789abcdefghi#oidc",
+	   "id": "oidc",
 	   "type": "OpenIdConnectVersion1.0Service",
 	   "serviceEndpoint": "https://openid.example.com/"
 	}, 
 	{
-	   "id": "did:example:123456789abcdefghi#hub",
+	   "id": "hub",
 	   "type": "HubService",
 	   "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
 	}
@@ -103,7 +114,7 @@ func (d *DIDSideSteps) createDIDDocument() error {
 
 	logger.Info("create did document")
 
-	opaqueDoc, err := d.getOpaqueDocument("#key1")
+	opaqueDoc, err := d.getOpaqueDocument("key1")
 	if err != nil {
 		return err
 	}
@@ -161,7 +172,7 @@ func (d *DIDSideSteps) recoverDIDDocument() error {
 
 	logger.Infof("recover did document")
 
-	opaqueDoc, err := d.getOpaqueDocument("#recoveryKey")
+	opaqueDoc, err := d.getOpaqueDocument("recoveryKey")
 	if err != nil {
 		return err
 	}
@@ -382,7 +393,7 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 }
 
 func (d *DIDSideSteps) getRevokeRequest(did string) ([]byte, error) {
-	return helper.NewRevokeRequest(&helper.RevokeRequestInfo{
+	return helper.NewDeactivateRequest(&helper.DeactivateRequestInfo{
 		DidUniqueSuffix:     did,
 		RecoveryRevealValue: []byte(recoveryRevealValue),
 		Signer:              d.recoveryKeySigner,
