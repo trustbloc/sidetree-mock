@@ -23,14 +23,14 @@ Feature:
     When client sends request to resolve DID document with initial value
     Then check success response contains "#didDocumentHash"
 
-  @create_revoke_did_doc
-  Scenario: revoke valid did doc
+  @create_deactivate_did_doc
+  Scenario: deactivate valid did doc
     When client sends request to create DID document
     Then check success response contains "#didDocumentHash"
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#didDocumentHash"
-    When client sends request to revoke DID document
+    When client sends request to deactivate DID document
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check error response contains "document is no longer available"
