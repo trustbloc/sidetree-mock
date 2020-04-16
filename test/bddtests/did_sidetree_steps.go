@@ -147,15 +147,15 @@ func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
 	return err
 }
 
-func (d *DIDSideSteps) revokeDIDDocument() error {
+func (d *DIDSideSteps) deactivateDIDDocument() error {
 	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return err
 	}
 
-	logger.Infof("revoke did document: %s", uniqueSuffix)
+	logger.Infof("deactivate did document: %s", uniqueSuffix)
 
-	req, err := d.getRevokeRequest(uniqueSuffix)
+	req, err := d.getDeactivateRequest(uniqueSuffix)
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 	return docutil.CalculateUniqueSuffix(createReq.SuffixData, sha2_256)
 }
 
-func (d *DIDSideSteps) getRevokeRequest(did string) ([]byte, error) {
+func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 	return helper.NewDeactivateRequest(&helper.DeactivateRequestInfo{
 		DidUniqueSuffix:     did,
 		RecoveryRevealValue: []byte(recoveryRevealValue),
@@ -489,7 +489,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
 	s.Step(`^client sends request to add service endpoint with ID "([^"]*)" to DID document$`, d.addServiceEndpointToDIDDocument)
 	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
-	s.Step(`^client sends request to revoke DID document$`, d.revokeDIDDocument)
+	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
