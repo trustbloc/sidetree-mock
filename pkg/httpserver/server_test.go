@@ -11,14 +11,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
@@ -74,33 +76,37 @@ func TestServer_Start(t *testing.T) {
 		resp, err := httpPut(t, clientURL+basePath, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		doc := make(map[string]interface{})
-		require.NoError(t, json.Unmarshal(resp, &doc))
-		require.Equal(t, didID, doc["id"])
+
+		var result document.ResolutionResult
+		require.NoError(t, json.Unmarshal(resp, &result))
+		require.Equal(t, didID, result.Document["id"])
 	})
 	t.Run("Resolve DID doc", func(t *testing.T) {
 		resp, err := httpGet(t, clientURL+basePath+"/"+didID)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		doc := make(map[string]interface{})
-		require.NoError(t, json.Unmarshal(resp, &doc))
-		require.Equal(t, didID, doc["id"])
+
+		var result document.ResolutionResult
+		require.NoError(t, json.Unmarshal(resp, &result))
+		require.Equal(t, didID, result.Document["id"])
 	})
 	t.Run("Create Sample doc", func(t *testing.T) {
 		resp, err := httpPut(t, clientURL+samplePath, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		doc := make(map[string]interface{})
-		require.NoError(t, json.Unmarshal(resp, &doc))
-		require.Equal(t, sampleID, doc["id"])
+
+		var result document.ResolutionResult
+		require.NoError(t, json.Unmarshal(resp, &result))
+		require.Equal(t, sampleID, result.Document["id"])
 	})
 	t.Run("Resolve Sample doc", func(t *testing.T) {
 		resp, err := httpGet(t, clientURL+samplePath+"/"+sampleID)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
-		doc := make(map[string]interface{})
-		require.NoError(t, json.Unmarshal(resp, &doc))
-		require.Equal(t, sampleID, doc["id"])
+
+		var result document.ResolutionResult
+		require.NoError(t, json.Unmarshal(resp, &result))
+		require.Equal(t, sampleID, result.Document["id"])
 	})
 	t.Run("Stop", func(t *testing.T) {
 		require.NoError(t, s.Stop(context.Background()))
