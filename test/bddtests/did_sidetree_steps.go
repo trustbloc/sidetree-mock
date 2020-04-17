@@ -43,7 +43,7 @@ const (
 const addPublicKeysTemplate = `[
 	{
       "id": "%s",
-      "usage": ["ops", "general"],
+      "usage": ["general"],
       "type": "Secp256k1VerificationKey2018",
       "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71"
     }
@@ -66,7 +66,7 @@ const docTemplate = `{
 	{
   		"id": "%s",
   		"type": "JwsVerificationKey2020",
-		"usage": ["ops", "general"],
+		"usage": ["ops"],
   		"publicKeyJwk": %s
 	},
     {
@@ -265,10 +265,19 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 			return err
 		}
 		msg = strings.Replace(msg, "#didDocumentHash", documentHash, -1)
-		didDoc, err := document.DidDocumentFromBytes(d.resp.Payload)
+
+		var result document.ResolutionResult
+		err = json.Unmarshal(d.resp.Payload, &result)
 		if err != nil {
 			return err
 		}
+
+		err = prettyPrint(&result)
+		if err != nil {
+			return err
+		}
+
+		didDoc := document.DidDocumentFromJSONLDObject(result.Document)
 
 		// perform basic checks on document
 		if didDoc.ID() == "" || didDoc.Context()[0] != "https://w3id.org/did/v1" ||
@@ -284,14 +293,16 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 		action = " NOT"
 	}
 
-	logger.Infof("check success resp %s MUST%s contain %s", string(d.resp.Payload), action, msg)
 	if contains && !strings.Contains(string(d.resp.Payload), msg) {
-		return errors.Errorf("success resp %s doesn't contain %s", d.resp.Payload, msg)
+		return errors.Errorf("success resp doesn't contain %s", msg)
 	}
 
 	if !contains && strings.Contains(string(d.resp.Payload), msg) {
-		return errors.Errorf("success resp %s should NOT contain %s", d.resp.Payload, msg)
+		return errors.Errorf("success resp should NOT contain %s", msg)
 	}
+
+	logger.Infof("passed check that success response MUST%s contain %s", action, msg)
+
 	return nil
 }
 
@@ -474,6 +485,17 @@ func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 func wait(seconds int) error {
 	logger.Infof("Waiting [%d] seconds\n", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
+	return nil
+}
+
+func prettyPrint(result *document.ResolutionResult) error {
+	b, err := json.MarshalIndent(result, "", " ")
+	if err != nil {
+		return err
+	}
+
+	logger.Info(string(b))
+
 	return nil
 }
 
