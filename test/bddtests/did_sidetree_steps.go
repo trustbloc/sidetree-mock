@@ -44,8 +44,13 @@ const addPublicKeysTemplate = `[
 	{
       "id": "%s",
       "usage": ["general"],
-      "type": "Secp256k1VerificationKey2018",
-      "publicKeyHex": "02b97c30de767f084ce3080168ee293053ba33b235d7116a3263d29f1450936b71"
+      "type": "JwsVerificationKey2020",
+      "jwk": {
+        "kty": "EC",
+        "crv": "P-256K",
+        "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
+        "y": "nM84jDHCMOTGTh_ZdHq4dBBdo4Z5PkEOW9jA8z8IsGc"
+      }
     }
   ]`
 
@@ -67,13 +72,24 @@ const docTemplate = `{
   		"id": "%s",
   		"type": "JwsVerificationKey2020",
 		"usage": ["ops"],
-  		"publicKeyJwk": %s
+  		"jwk": %s
 	},
     {
-      "id": "dual-key",
+      "id": "dual-auth-general",
       "type": "JwsVerificationKey2020",
       "usage": ["auth", "general"],
-      "publicKeyJwk": {
+      "jwk": {
+        "kty": "EC",
+        "crv": "P-256K",
+        "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
+        "y": "nM84jDHCMOTGTh_ZdHq4dBBdo4Z5PkEOW9jA8z8IsGc"
+      }
+    },
+    {
+      "id": "dual-assertion-general",
+      "type": "JwsVerificationKey2020",
+      "usage": ["assertion", "general"],
+      "jwk": {
         "kty": "EC",
         "crv": "P-256K",
         "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
@@ -363,7 +379,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 	}
 
 	recoverRequest, err := helper.NewRecoverRequest(&helper.RecoverRequestInfo{
-		DidUniqueSuffix:         uniqueSuffix,
+		DidSuffix:               uniqueSuffix,
 		OpaqueDocument:          string(doc),
 		RecoveryKey:             newRecoveryPublicKey,
 		RecoveryRevealValue:     []byte(recoveryRevealValue),
@@ -405,7 +421,7 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 
 func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 	return helper.NewDeactivateRequest(&helper.DeactivateRequestInfo{
-		DidUniqueSuffix:     did,
+		DidSuffix:           did,
 		RecoveryRevealValue: []byte(recoveryRevealValue),
 		Signer:              d.recoveryKeySigner,
 	})
@@ -413,7 +429,7 @@ func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 
 func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
 	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
-		DidUniqueSuffix:       did,
+		DidSuffix:             did,
 		UpdateRevealValue:     []byte(updateRevealValue),
 		NextUpdateRevealValue: []byte(updateRevealValue),
 		Patch:                 updatePatch,
