@@ -8,6 +8,7 @@ package bddtests
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
@@ -74,28 +75,18 @@ const docTemplate = `{
 		"usage": ["ops"],
   		"jwk": %s
 	},
-    {
-      "id": "dual-auth-general",
-      "type": "JwsVerificationKey2020",
-      "usage": ["auth", "general"],
-      "jwk": {
-        "kty": "EC",
-        "crv": "P-256K",
-        "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
-        "y": "nM84jDHCMOTGTh_ZdHq4dBBdo4Z5PkEOW9jA8z8IsGc"
-      }
-    },
-    {
-      "id": "dual-assertion-general",
-      "type": "JwsVerificationKey2020",
-      "usage": ["assertion", "general"],
-      "jwk": {
-        "kty": "EC",
-        "crv": "P-256K",
-        "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
-        "y": "nM84jDHCMOTGTh_ZdHq4dBBdo4Z5PkEOW9jA8z8IsGc"
-      }
-    }
+   {
+     "id": "dual-auth-general",
+     "type": "JwsVerificationKey2020",
+     "usage": ["auth", "general"],
+     "jwk": %s
+   },
+   {
+     "id": "dual-assertion-general",
+     "type": "Ed25519VerificationKey2018",
+     "usage": ["assertion", "general"],
+     "jwk": %s
+   }
   ],
   "service": [
 	{
@@ -469,33 +460,63 @@ func getRemoveServiceEndpointsPatch(keyID string) (patch.Patch, error) {
 }
 
 func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
-	// generate private key that will be used for document updates and
-	// insert public key that correspond to this private key into document (JWK format)
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	// create operations key (used for document updates)
+	opsPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
-	publicKey, err := pubkey.GetPublicKeyJWK(&privateKey.PublicKey)
+	opsPubKey, err := getPubKey(&opsPrivateKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 
-	publicKeyBytes, err := json.Marshal(publicKey)
+	// create general + auth JWS verification key
+	jwsPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
 
-	data := fmt.Sprintf(docTemplate, keyID, string(publicKeyBytes))
+	jwsPubKey, err := getPubKey(&jwsPrivateKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// create general + assertion ed25519 verification key
+	ed25519PulicKey, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	ed25519PubKey, err := getPubKey(ed25519PulicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	data := fmt.Sprintf(docTemplate, keyID, opsPubKey, jwsPubKey, ed25519PubKey)
 
 	doc, err := document.FromBytes([]byte(data))
 	if err != nil {
 		return nil, err
 	}
 
-	d.updateKeySigner = ecsigner.New(privateKey, "ES256", keyID)
+	d.updateKeySigner = ecsigner.New(opsPrivateKey, "ES256", keyID)
 
 	return doc.Bytes()
+}
+
+func getPubKey(pubKey interface{}) (string, error) {
+	publicKey, err := pubkey.GetPublicKeyJWK(pubKey)
+	if err != nil {
+		return "", err
+	}
+
+	opsPubKeyBytes, err := json.Marshal(publicKey)
+	if err != nil {
+		return "", err
+	}
+
+	return string(opsPubKeyBytes), nil
 }
 
 func wait(seconds int) error {
