@@ -23,10 +23,9 @@ func NewMockProtocolClient() *MockProtocolClient {
 			StartingBlockChainTime:       0,
 			HashAlgorithmInMultiHashCode: 18,
 			MaxOperationsPerBatch:        1, // one operation per batch - batch gets cut right away
-			MaxOperationByteSize:         200000,
+			MaxDeltaByteSize:             200000,
 		},
 	}
-
 }
 
 // Current mocks getting last protocol version

@@ -34,6 +34,7 @@ var logger = logrus.New()
 
 const (
 	didDocNamespace     = "did:sidetree:test"
+	initialStateParam   = "?-sidetree:test-initial-state="
 	testDocumentURL     = "https://localhost:48326/document"
 	initialValuesParam  = ";initial-values="
 	sha2_256            = 18
@@ -104,7 +105,7 @@ const docTemplate = `{
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	createRequest     []byte
+	createRequest     model.CreateRequest
 	recoveryKeySigner helper.Signer
 	updateKeySigner   helper.Signer
 	resp              *restclient.HttpRespone
@@ -131,7 +132,10 @@ func (d *DIDSideSteps) createDIDDocument() error {
 		return err
 	}
 
-	d.createRequest = req
+	err = json.Unmarshal(req, &d.createRequest)
+	if err != nil {
+		return err
+	}
 
 	d.resp, err = restclient.SendRequest(testDocumentURL, req)
 	return err
@@ -242,7 +246,9 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with initial value", didID)
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialValuesParam + docutil.EncodeToString(d.createRequest))
+	initialState := d.createRequest.Delta + "." + d.createRequest.SuffixData
+
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialStateParam + initialState)
 	return err
 }
 
@@ -328,7 +334,9 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 		return err
 	}
 
-	req := testDocumentURL + "/" + did + initialValuesParam + docutil.EncodeToString(d.createRequest)
+	initialState := d.createRequest.Delta + "." + d.createRequest.SuffixData
+
+	req := testDocumentURL + "/" + did + initialStateParam + initialState
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
 }
@@ -401,13 +409,7 @@ func (d *DIDSideSteps) getDID() (string, error) {
 }
 
 func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
-	var createReq model.CreateRequest
-	err := json.Unmarshal(d.createRequest, &createReq)
-	if err != nil {
-		return "", err
-	}
-
-	return docutil.CalculateUniqueSuffix(createReq.SuffixData, sha2_256)
+	return docutil.CalculateUniqueSuffix(d.createRequest.SuffixData, sha2_256)
 }
 
 func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
