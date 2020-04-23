@@ -34,9 +34,9 @@ var logger = logrus.New()
 
 const (
 	didDocNamespace     = "did:sidetree:test"
-	initialStateParam   = "?-sidetree:test-initial-state="
+	initialStateParam   = "?-sidetree-initial-state="
 	testDocumentURL     = "https://localhost:48326/document"
-	initialValuesParam  = ";initial-values="
+
 	sha2_256            = 18
 	recoveryRevealValue = "recoveryOTP"
 	updateRevealValue   = "updateOTP"
@@ -246,9 +246,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with initial value", didID)
 
-	initialState := d.createRequest.Delta + "." + d.createRequest.SuffixData
-
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID + initialStateParam + initialState)
+	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
 	return err
 }
 
