@@ -35,6 +35,7 @@ const (
 
 	didDocNamespace = "did:sidetree"
 	basePath        = "/document"
+	baseUpdatePath  = "/document/operations"
 
 	sha2_256        = 18
 	sampleNamespace = "sample:sidetree"
@@ -73,7 +74,7 @@ func TestServer_Start(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Create DID doc", func(t *testing.T) {
-		resp, err := httpPut(t, clientURL+basePath, req)
+		resp, err := httpPut(t, clientURL+baseUpdatePath, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 

@@ -33,9 +33,10 @@ import (
 var logger = logrus.New()
 
 const (
-	didDocNamespace     = "did:sidetree:test"
-	initialStateParam   = "?-sidetree-initial-state="
-	testDocumentURL     = "https://localhost:48326/document"
+	didDocNamespace        = "did:sidetree:test"
+	initialStateParam      = "?-sidetree-initial-state="
+	testDocumentResolveURL = "https://localhost:48326/document"
+	testDocumentUpdateURL  = "https://localhost:48326/document/operations"
 
 	sha2_256            = 18
 	recoveryRevealValue = "recoveryOTP"
@@ -137,7 +138,7 @@ func (d *DIDSideSteps) createDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
 	return err
 }
 
@@ -154,7 +155,7 @@ func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
 	return err
 }
 
@@ -171,7 +172,7 @@ func (d *DIDSideSteps) deactivateDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
 	return err
 }
 
@@ -193,7 +194,7 @@ func (d *DIDSideSteps) recoverDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentURL, req)
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
 	return err
 }
 
@@ -246,7 +247,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with initial value", didID)
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
+	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
 	return err
 }
 
@@ -322,7 +323,7 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	if err != nil {
 		return err
 	}
-	d.resp, err = restclient.SendResolveRequest(testDocumentURL + "/" + did)
+	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + did)
 	return err
 }
 
@@ -334,7 +335,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 
 	initialState := d.createRequest.Delta + "." + d.createRequest.SuffixData
 
-	req := testDocumentURL + "/" + did + initialStateParam + initialState
+	req := testDocumentResolveURL + "/" + did + initialStateParam + initialState
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
 }
