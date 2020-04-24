@@ -33,7 +33,7 @@ var logger = logrus.New()
 var config = viper.New()
 
 const defaultDIDDocNamespace = "did:sidetree"
-const basePath = "/document"
+const basePath = "/sidetree/0.0.1"
 
 func main() {
 	config.SetEnvPrefix("SIDETREE_MOCK")
