@@ -34,12 +34,16 @@ const (
 	clientURL = "http://" + url
 
 	didDocNamespace = "did:sidetree"
-	basePath        = "/document"
-	baseUpdatePath  = "/document/operations"
+	basePath        = "/sidetree/0.0.1"
 
 	sha2_256        = 18
 	sampleNamespace = "sample:sidetree"
 	samplePath      = "/sample"
+)
+
+var (
+	baseResolvePath = basePath + "/identifiers"
+	baseUpdatePath  = basePath + "/operations"
 )
 
 func TestServer_Start(t *testing.T) {
@@ -83,7 +87,7 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, result.Document["id"])
 	})
 	t.Run("Resolve DID doc", func(t *testing.T) {
-		resp, err := httpGet(t, clientURL+basePath+"/"+didID)
+		resp, err := httpGet(t, clientURL+baseResolvePath+"/"+didID)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 

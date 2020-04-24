@@ -12,26 +12,26 @@ Sidetree REST API
 
 Request Path ::
 
- Post /document
+ Post /sidetree/0.0.1/operations
 
 
 **DID Document resolution**
 
 Request Path ::
 
- GET  /document/{DidOrDidDocument}
+ GET  /sidetree/0.0.1/identifiers/{DidOrDidDocument}
 
 **Updating a DID Document**
 
 Request Path ::
 
- Post /document
+ Post /sidetree/0.0.1/operations
 
 **DID Deletion**
 
 Request Path ::
 
-  Post /document
+ Post /sidetree/0.0.1/operations
 
 **DID Resolution**
 

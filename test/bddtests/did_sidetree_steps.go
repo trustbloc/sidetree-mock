@@ -35,8 +35,8 @@ var logger = logrus.New()
 const (
 	didDocNamespace        = "did:sidetree:test"
 	initialStateParam      = "?-sidetree-initial-state="
-	testDocumentResolveURL = "https://localhost:48326/document"
-	testDocumentUpdateURL  = "https://localhost:48326/document/operations"
+	testDocumentResolveURL = "https://localhost:48326/sidetree/0.0.1/identifiers"
+	testDocumentUpdateURL  = "https://localhost:48326/sidetree/0.0.1/operations"
 
 	sha2_256            = 18
 	recoveryRevealValue = "recoveryOTP"
