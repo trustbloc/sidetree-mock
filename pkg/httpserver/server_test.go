@@ -230,7 +230,11 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 func getCreateRequest() ([]byte, error) {
 	info := &helper.CreateRequestInfo{
 		OpaqueDocument: validDoc,
-		RecoveryKey:    &jws.JWK{},
+		RecoveryKey:    &jws.JWK{
+			Kty: "kty",
+			Crv: "crv",
+			X:   "x",
+		},
 		MultihashCode:  sha2_256,
 	}
 	return helper.NewCreateRequest(info)
