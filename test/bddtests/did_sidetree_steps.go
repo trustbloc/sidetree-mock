@@ -292,7 +292,7 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 		didDoc := document.DidDocumentFromJSONLDObject(result.Document)
 
 		// perform basic checks on document
-		if didDoc.ID() == "" || didDoc.Context()[0] != "https://w3id.org/did/v1" ||
+		if didDoc.ID() == "" || didDoc.Context()[0] != "https://www.w3.org/ns/did/v1" ||
 			!strings.Contains(didDoc.PublicKeys()[0].Controller(), didDoc.ID()) {
 			return errors.New("response is not a valid did document")
 		}
@@ -346,7 +346,7 @@ func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	d.recoveryKeySigner = ecsigner.New(privateKey, "ES256", "recovery")
+	d.recoveryKeySigner = ecsigner.New(privateKey, "ES256", "")
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 	}
 
 	// update recovery key singer for subsequent requests
-	d.recoveryKeySigner = ecsigner.New(newPrivateKey, "ES256", "recovery")
+	d.recoveryKeySigner = ecsigner.New(newPrivateKey, "ES256", "")
 
 	return recoverRequest, nil
 }
