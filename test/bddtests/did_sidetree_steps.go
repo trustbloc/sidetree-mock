@@ -245,7 +245,7 @@ func (d *DIDSideSteps) removeServiceEndpointsFromDIDDocument(keyID string) error
 
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
-	logger.Infof("resolve did document %s with initial value", didID)
+	logger.Infof("resolve did document %s with id", didID)
 
 	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
 	return err
@@ -333,7 +333,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 		return err
 	}
 
-	initialState := d.createRequest.Delta + "." + d.createRequest.SuffixData
+	initialState := d.createRequest.SuffixData + "." + d.createRequest.Delta
 
 	req := testDocumentResolveURL + "/" + did + initialStateParam + initialState
 	d.resp, err = restclient.SendResolveRequest(req)
