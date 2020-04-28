@@ -47,16 +47,6 @@ Feature:
     When client sends request to resolve DID document
     Then check success response contains "recoveryKey"
 
-    @create_update_did_doc
-    Scenario: update valid did doc
-      When client sends request to create DID document
-      Then check success response contains "#didDocumentHash"
-      Then we wait 1 seconds
-      When client sends request to update DID document path "/publicKey/0/type" with value "updatedValue"
-      Then we wait 1 seconds
-      When client sends request to resolve DID document
-      Then check success response contains "updatedValue"
-
     @create_add_remove_public_key
     Scenario: add and remove public keys
       When client sends request to create DID document
