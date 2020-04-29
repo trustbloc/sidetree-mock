@@ -9,7 +9,7 @@ require (
 	github.com/fsouza/go-dockerclient v1.3.0
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0
-	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200428212404-9f9bd5c0a9ce
+	github.com/trustbloc/sidetree-core-go v0.1.3-0.20200429221156-29aa142ef836
 )
 
 go 1.13

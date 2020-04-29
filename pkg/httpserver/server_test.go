@@ -246,7 +246,7 @@ func getCreateRequest() ([]byte, error) {
 
 const validDoc = `{
 	"publicKey": [{
-		"id": "#key-1",
+		"id": "key-1",
 		"usage": ["general"],
 		"type": "JwsVerificationKey2020",
 		"jwk": {
