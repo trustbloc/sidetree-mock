@@ -53,6 +53,7 @@ func TestServer_Start(t *testing.T) {
 	s := New(url,
 		"",
 		"",
+		"tk1",
 		diddochandler.NewUpdateHandler(basePath, didDocHandler),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
 		newSampleUpdateHandler(sampleDocHandler),
@@ -77,8 +78,18 @@ func TestServer_Start(t *testing.T) {
 	sampleID, err := docutil.CalculateID(sampleNamespace, createReq.SuffixData, sha2_256)
 	require.NoError(t, err)
 
+	authorizationHdr := "Bearer " + "tk1"
+
+	t.Run("Create DID doc failed ", func(t *testing.T) {
+		resp, err := httpPut(t, clientURL+baseUpdatePath, "wrongToken", req)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Unauthorised")
+		require.Nil(t, resp)
+
+	})
+
 	t.Run("Create DID doc", func(t *testing.T) {
-		resp, err := httpPut(t, clientURL+baseUpdatePath, req)
+		resp, err := httpPut(t, clientURL+baseUpdatePath, authorizationHdr, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -87,7 +98,8 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, result.Document["id"])
 	})
 	t.Run("Resolve DID doc", func(t *testing.T) {
-		resp, err := httpGet(t, clientURL+baseResolvePath+"/"+didID)
+		authorizationHdr := "Bearer " + "tk1"
+		resp, err := httpGet(t, clientURL+baseResolvePath+"/"+didID, authorizationHdr)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -96,7 +108,7 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, didID, result.Document["id"])
 	})
 	t.Run("Create Sample doc", func(t *testing.T) {
-		resp, err := httpPut(t, clientURL+samplePath, req)
+		resp, err := httpPut(t, clientURL+samplePath, authorizationHdr, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -105,7 +117,7 @@ func TestServer_Start(t *testing.T) {
 		require.Equal(t, sampleID, result.Document["id"])
 	})
 	t.Run("Resolve Sample doc", func(t *testing.T) {
-		resp, err := httpGet(t, clientURL+samplePath+"/"+sampleID)
+		resp, err := httpGet(t, clientURL+samplePath+"/"+sampleID, authorizationHdr)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -121,13 +133,18 @@ func TestServer_Start(t *testing.T) {
 
 // httpPut sends a regular POST request to the sidetree-node
 // - If post request has operation "create" then return sidetree document else no response
-func httpPut(t *testing.T, url string, req []byte) ([]byte, error) {
+func httpPut(t *testing.T, url, authorizationHdr string, req []byte) ([]byte, error) {
 	client := &http.Client{}
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(req))
 	require.NoError(t, err)
 
 	httpReq.Header.Set("Content-Type", "application/json")
+
+	if authorizationHdr != "" {
+		httpReq.Header.Add("Authorization", authorizationHdr)
+	}
+
 	resp, err := invokeWithRetry(
 		func() (response *http.Response, e error) {
 			return client.Do(httpReq)
@@ -138,11 +155,19 @@ func httpPut(t *testing.T, url string, req []byte) ([]byte, error) {
 }
 
 // httpGet send a regular GET request to the sidetree-node and expects 'side tree document' argument as a response
-func httpGet(t *testing.T, url string) ([]byte, error) {
+func httpGet(t *testing.T, url, authorizationHdr string) ([]byte, error) {
 	client := &http.Client{}
+
+	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+
+	if authorizationHdr != "" {
+		httpReq.Header.Add("Authorization", authorizationHdr)
+	}
+
 	resp, err := invokeWithRetry(
 		func() (response *http.Response, e error) {
-			return client.Get(url)
+			return client.Do(httpReq)
 		},
 	)
 	require.NoError(t, err)
@@ -234,12 +259,12 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 func getCreateRequest() ([]byte, error) {
 	info := &helper.CreateRequestInfo{
 		OpaqueDocument: validDoc,
-		RecoveryKey:    &jws.JWK{
+		RecoveryKey: &jws.JWK{
 			Kty: "kty",
 			Crv: "crv",
 			X:   "x",
 		},
-		MultihashCode:  sha2_256,
+		MultihashCode: sha2_256,
 	}
 	return helper.NewCreateRequest(info)
 }

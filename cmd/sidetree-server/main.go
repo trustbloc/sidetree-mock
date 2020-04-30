@@ -82,6 +82,7 @@ func main() {
 		getListenURL(),
 		config.GetString("tls.certificate"),
 		config.GetString("tls.key"),
+		config.GetString("api.token"),
 		diddochandler.NewUpdateHandler(basePath, didDocHandler),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
 	)
