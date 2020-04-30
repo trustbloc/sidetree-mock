@@ -8,6 +8,7 @@ package httpserver
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -30,8 +31,13 @@ type Server struct {
 }
 
 // New returns a new HTTP server
-func New(url, certFile, keyFile string, handlers ...common.HTTPHandler) *Server {
+func New(url, certFile, keyFile, token string, handlers ...common.HTTPHandler) *Server {
 	router := mux.NewRouter()
+
+	if token != "" {
+		router.Use(authorizationMiddleware(token))
+	}
+
 	for _, handler := range handlers {
 		logger.Infof("Registering handler for [%s]", handler.Path())
 		router.HandleFunc(handler.Path(), handler.Handler()).Methods(handler.Method())
@@ -48,6 +54,32 @@ func New(url, certFile, keyFile string, handlers ...common.HTTPHandler) *Server 
 		certFile: certFile,
 		keyFile:  keyFile,
 	}
+}
+
+func validateAuthorizationBearerToken(w http.ResponseWriter, r *http.Request, token string) bool {
+	actHdr := r.Header.Get("Authorization")
+	expHdr := "Bearer " + token
+
+	if subtle.ConstantTimeCompare([]byte(actHdr), []byte(expHdr)) != 1 {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorised.\n")) // nolint:gosec,errcheck
+
+		return false
+	}
+
+	return true
+}
+
+func authorizationMiddleware(token string) mux.MiddlewareFunc {
+	middleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if validateAuthorizationBearerToken(w, r, token) {
+				next.ServeHTTP(w, r)
+			}
+		})
+	}
+
+	return middleware
 }
 
 // Start starts the HTTP server in a separate Go routine
