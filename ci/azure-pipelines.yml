@@ -58,8 +58,8 @@ jobs:
           source ci/version_var.sh
           echo $DOCKER_PASSWORD | docker login docker.pkg.github.com --username $DOCKER_USER --password-stdin
           make sidetree-docker
-          docker tag trustbloc/sidetree-mock:latest  docker.pkg.github.com/trustbloc/sidetree-mock/sidetree:$SIDETREE_MOCK_TAG
-          docker push docker.pkg.github.com/trustbloc/sidetree-mock/sidetree:$SIDETREE_MOCK_TAG
+          docker tag trustbloc/sidetree-mock:latest ${SIDETREE_MOCK_PKG}:${SIDETREE_MOCK_TAG}
+          docker push ${SIDETREE_MOCK_PKG}:${SIDETREE_MOCK_TAG}
         env:
           DOCKER_USER: $(DOCKER_USER)
           DOCKER_PASSWORD: $(DOCKER_PASSWORD)
