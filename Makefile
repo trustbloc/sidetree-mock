@@ -21,7 +21,7 @@ DEV_IMAGES         = $(shell docker images dev-* -q)
 ARCH               = $(shell go env GOARCH)
 GO_VER             = 1.13.4
 
-# Namespace for the sidetree node
+# Namespace for the sidetree mock node
 DOCKER_OUTPUT_NS          ?= trustbloc
 SIDETREE_MOCK_IMAGE_NAME  ?= sidetree-mock
 
@@ -47,12 +47,12 @@ unit-test:
 
 all: clean checks unit-test bddtests
 
-sidetree:
-	@echo "Building sidetree"
+sidetree-mock:
+	@echo "Building sidetree-mock"
 	@mkdir -p ./.build/bin
 	@go build -o ./.build/bin/sidetree-mock cmd/sidetree-server/main.go
 
-sidetree-docker: sidetree
+sidetree-mock-docker: sidetree-mock
 	@docker build -f ./images/sidetree-mock/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(SIDETREE_MOCK_IMAGE_NAME):latest \
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) \
@@ -77,7 +77,7 @@ generate-test-keys:
 		--entrypoint "/opt/workspace/sidetree-mock/scripts/generate_test_keys.sh" \
 		frapsoft/openssl
 
-bddtests: generate-test-keys sidetree-docker
+bddtests: generate-test-keys sidetree-mock-docker
 	@scripts/integration.sh
 
 clean:

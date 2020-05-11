@@ -57,7 +57,7 @@ jobs:
           trap logout EXIT
           source ci/version_var.sh
           echo $DOCKER_PASSWORD | docker login docker.pkg.github.com --username $DOCKER_USER --password-stdin
-          make sidetree-docker
+          make sidetree-mock-docker
           docker tag trustbloc/sidetree-mock:latest ${SIDETREE_MOCK_PKG}:${SIDETREE_MOCK_TAG}
           docker push ${SIDETREE_MOCK_PKG}:${SIDETREE_MOCK_TAG}
         env:

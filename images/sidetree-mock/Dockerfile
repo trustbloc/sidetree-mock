@@ -19,12 +19,12 @@ ADD . $GOPATH/src/github.com/trustbloc/sidetree-mock
 WORKDIR $GOPATH/src/github.com/trustbloc/sidetree-mock
 ENV EXECUTABLES go git
 
-FROM golang as sidetree
+FROM golang as sidetree-mock
 ARG GO_TAGS
 ARG GOPROXY
-RUN GO_TAGS=${GO_TAGS} GOPROXY=${GOPROXY} make sidetree
+RUN GO_TAGS=${GO_TAGS} GOPROXY=${GOPROXY} make sidetree-mock
 
 
 FROM alpine:${ALPINE_VER} as base
-COPY --from=sidetree /go/src/github.com/trustbloc/sidetree-mock/.build/bin/sidetree-mock /usr/local/bin
+COPY --from=sidetree-mock /go/src/github.com/trustbloc/sidetree-mock/.build/bin/sidetree-mock /usr/local/bin
 CMD ["sidetree-mock"]
