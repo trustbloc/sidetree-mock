@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package context
 
 import (
+	"github.com/trustbloc/sidetree-core-go/pkg/api/cas"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch/cutter"
@@ -53,7 +54,7 @@ func (m *ServerContext) Blockchain() batch.BlockchainClient {
 }
 
 // CAS returns the CAS client
-func (m *ServerContext) CAS() batch.CASClient {
+func (m *ServerContext) CAS() cas.Client {
 	return m.CasClient
 }
 
