@@ -10,7 +10,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/api/cas"
+	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
+	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
+	"github.com/trustbloc/sidetree-core-go/pkg/txnhandler"
+
 	sidetreeobserver "github.com/trustbloc/sidetree-core-go/pkg/observer"
 )
 
@@ -20,17 +25,17 @@ type ledger struct {
 	blockChainClient batch.BlockchainClient
 }
 
-func (l *ledger) RegisterForSidetreeTxn() <-chan []sidetreeobserver.SidetreeTxn {
+func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
 	// TODO make it configurable
 	ticker := time.NewTicker(500 * time.Millisecond)
-	anchorFileAddressChan := make(chan []sidetreeobserver.SidetreeTxn, 100)
+	anchorFileAddressChan := make(chan []txn.SidetreeTxn, 100)
 	sinceTransactionNumber := -1
 	go func() {
 		for range ticker.C {
 			moreTransactions := true
-			sidetreeTxns := make([]sidetreeobserver.SidetreeTxn, 0)
+			sidetreeTxns := make([]txn.SidetreeTxn, 0)
 			for moreTransactions {
-				var sidetreeTxn *sidetreeobserver.SidetreeTxn
+				var sidetreeTxn *txn.SidetreeTxn
 				moreTransactions, sidetreeTxn = l.blockChainClient.Read(sinceTransactionNumber)
 				if sidetreeTxn != nil {
 					sinceTransactionNumber = int(sidetreeTxn.TransactionNumber)
@@ -46,19 +51,11 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []sidetreeobserver.SidetreeTxn 
 	return anchorFileAddressChan
 }
 
-type dcas struct {
-	cas batch.CASClient
-}
-
-func (d dcas) Read(key string) ([]byte, error) {
-	return d.cas.Read(key)
-}
-
 // Start starts observer routines
-func Start(blockchainClient batch.BlockchainClient, cas batch.CASClient, operationStoreProvider sidetreeobserver.OperationStoreProvider) {
+func Start(blockchainClient batch.BlockchainClient, cas cas.Client, operationStoreProvider sidetreeobserver.OperationStoreProvider, p protocol.Client) {
 	providers := &sidetreeobserver.Providers{
 		Ledger:           &ledger{blockChainClient: blockchainClient},
-		DCASClient:       dcas{cas: cas},
+		TxnOpsProvider:   txnhandler.New(cas, p),
 		OpStoreProvider:  operationStoreProvider,
 		OpFilterProvider: &sidetreeobserver.NoopOperationFilterProvider{},
 	}
