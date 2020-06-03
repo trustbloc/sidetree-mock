@@ -32,3 +32,20 @@ func NewMockProtocolClient() *MockProtocolClient {
 func (m *MockProtocolClient) Current() protocol.Protocol {
 	return m.Protocol
 }
+
+// NewMockProtocolClientProvider creates new mock protocol client provider
+func NewMockProtocolClientProvider() *MockProtocolClientProvider {
+	return &MockProtocolClientProvider{
+		ProtocolClient: NewMockProtocolClient(),
+	}
+}
+
+// MockProtocolClientProvider implements mock protocol client provider
+type MockProtocolClientProvider struct {
+	ProtocolClient protocol.Client
+}
+
+// ForNamespace provides protocol client for namespace
+func (m *MockProtocolClientProvider) ForNamespace(namespace string) (protocol.Client, error) {
+	return m.ProtocolClient, nil
+}
