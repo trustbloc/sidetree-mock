@@ -40,8 +40,8 @@ func TestStartObserver(t *testing.T) {
 			return nil
 		}}
 
-		Start(&mockBlockchainClient{readValue: []*txn.SidetreeTxn{{AnchorAddress: "anchorAddress", TransactionNumber: 0},
-			{AnchorAddress: "anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
+		Start(&mockBlockchainClient{readValue: []*txn.SidetreeTxn{{AnchorString: "1.anchorAddress", TransactionNumber: 0},
+			{AnchorString: "1.anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
 				return json.Marshal(&models.AnchorFile{MapFileHash: "mapAddress",
 					Operations: models.Operations{
@@ -57,7 +57,7 @@ func TestStartObserver(t *testing.T) {
 				return json.Marshal(&models.ChunkFile{Deltas: []string{getDelta()}})
 			}
 			return nil, nil
-		}}, mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClient())
+		}}, mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClientProvider())
 		time.Sleep(2000 * time.Millisecond)
 		rw.RLock()
 		require.Equal(t, 2, hits)

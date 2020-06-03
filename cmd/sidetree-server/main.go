@@ -67,7 +67,7 @@ func main() {
 	batchWriter.Start()
 
 	// start observer
-	observer.Start(ctx.Blockchain(), ctx.CAS(), mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClient())
+	observer.Start(ctx.Blockchain(), ctx.CAS(), mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClientProvider())
 
 	// did document handler with did document validator for didDocNamespace
 	didDocHandler := dochandler.New(
