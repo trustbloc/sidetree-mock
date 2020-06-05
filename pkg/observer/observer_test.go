@@ -47,7 +47,6 @@ func TestStartObserver(t *testing.T) {
 					Operations: models.Operations{
 						Create: []models.CreateOperation{{
 							SuffixData: getSuffixData(),
-							Namespace:  "did:sidetree",
 						}}}})
 			}
 			if key == "mapAddress" {
