@@ -14,11 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
+	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 	"github.com/trustbloc/sidetree-core-go/pkg/txnhandler/models"
+
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
 
@@ -43,17 +45,17 @@ func TestStartObserver(t *testing.T) {
 		Start(&mockBlockchainClient{readValue: []*txn.SidetreeTxn{{AnchorString: "1.anchorAddress", TransactionNumber: 0},
 			{AnchorString: "1.anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
-				return json.Marshal(&models.AnchorFile{MapFileHash: "mapAddress",
+				return compress(&models.AnchorFile{MapFileHash: "mapAddress",
 					Operations: models.Operations{
 						Create: []models.CreateOperation{{
 							SuffixData: getSuffixData(),
 						}}}})
 			}
 			if key == "mapAddress" {
-				return json.Marshal(&models.MapFile{Chunks: []models.Chunk{{ChunkFileURI: "chunkAddress"}}})
+				return compress(&models.MapFile{Chunks: []models.Chunk{{ChunkFileURI: "chunkAddress"}}})
 			}
 			if key == "chunkAddress" {
-				return json.Marshal(&models.ChunkFile{Deltas: []string{getDelta()}})
+				return compress(&models.ChunkFile{Deltas: []string{getDelta()}})
 			}
 			return nil, nil
 		}}, mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClientProvider())
@@ -157,6 +159,17 @@ func getDelta() string {
 	}
 
 	return docutil.EncodeToString(bytes)
+}
+
+func compress(model interface{}) ([]byte, error) {
+	bytes, err := docutil.MarshalCanonical(model)
+	if err != nil {
+		return nil, err
+	}
+
+	cp := compression.New(compression.WithDefaultAlgorithms())
+
+	return cp.Compress("GZIP", bytes)
 }
 
 const validDoc = `{"key": "value"}`
