@@ -14,6 +14,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
+	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/txnhandler"
 
 	sidetreeobserver "github.com/trustbloc/sidetree-core-go/pkg/observer"
@@ -55,7 +56,7 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
 func Start(blockchainClient batch.BlockchainClient, cas cas.Client, operationStoreProvider sidetreeobserver.OperationStoreProvider, pcp protocol.ClientProvider) {
 	providers := &sidetreeobserver.Providers{
 		Ledger:           &ledger{blockChainClient: blockchainClient},
-		TxnOpsProvider:   txnhandler.NewOperationProvider(cas, pcp),
+		TxnOpsProvider:   txnhandler.NewOperationProvider(cas, pcp, compression.New(compression.WithDefaultAlgorithms())),
 		OpStoreProvider:  operationStoreProvider,
 		OpFilterProvider: &sidetreeobserver.NoopOperationFilterProvider{},
 	}

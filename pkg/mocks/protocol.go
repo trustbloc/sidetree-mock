@@ -10,6 +10,8 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 )
 
+const maxBatchFileSize = 2000000 // in bytes
+
 // MockProtocolClient mocks protocol for testing purposes.
 type MockProtocolClient struct {
 	Protocol protocol.Protocol
@@ -24,6 +26,10 @@ func NewMockProtocolClient() *MockProtocolClient {
 			HashAlgorithmInMultiHashCode: 18,
 			MaxOperationsPerBatch:        1, // one operation per batch - batch gets cut right away
 			MaxDeltaByteSize:             200000,
+			CompressionAlgorithm:         "GZIP",
+			MaxChunkFileSize:             maxBatchFileSize,
+			MaxMapFileSize:               maxBatchFileSize,
+			MaxAnchorFileSize:            maxBatchFileSize,
 		},
 	}
 }
