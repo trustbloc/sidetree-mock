@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
@@ -39,8 +40,6 @@ const (
 	testDocumentUpdateURL  = "https://localhost:48326/sidetree/0.0.1/operations"
 
 	sha2_256            = 18
-	recoveryRevealValue = "recoveryOTP"
-	updateRevealValue   = "updateOTP"
 )
 
 const addPublicKeysTemplate = `[
@@ -71,14 +70,8 @@ const removeServicesTemplate = `["%s"]`
 
 const docTemplate = `{
   "publicKey": [
-	{
-  		"id": "%s",
-  		"type": "JwsVerificationKey2020",
-		"usage": ["ops"],
-  		"jwk": %s
-	},
    {
-     "id": "dual-auth-gen",
+     "id": "%s",
      "type": "JwsVerificationKey2020",
      "usage": ["auth", "general"],
      "jwk": %s
@@ -107,8 +100,8 @@ const docTemplate = `{
 // DIDSideSteps
 type DIDSideSteps struct {
 	createRequest     model.CreateRequest
-	recoveryKeySigner helper.Signer
-	updateKeySigner   helper.Signer
+	recoveryKey       *ecdsa.PrivateKey
+	updateKey         *ecdsa.PrivateKey
 	resp              *restclient.HttpRespone
 	bddContext        *BDDContext
 }
@@ -123,7 +116,7 @@ func (d *DIDSideSteps) createDIDDocument() error {
 
 	logger.Info("create did document")
 
-	opaqueDoc, err := d.getOpaqueDocument("key1")
+	opaqueDoc, err := d.getOpaqueDocument("createKey")
 	if err != nil {
 		return err
 	}
@@ -341,58 +334,62 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 }
 
 func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
 	}
 
-	d.recoveryKeySigner = ecsigner.New(privateKey, "ES256", "")
+	d.recoveryKey = recoveryKey
+
+	updateKey, updateCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
 	}
 
-	recoveryPublicKey, err := pubkey.GetPublicKeyJWK(&privateKey.PublicKey)
-	if err != nil {
-		return nil, err
-	}
+	d.updateKey = updateKey
 
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
-		OpaqueDocument:          string(doc),
-		RecoveryKey:             recoveryPublicKey,
-		NextRecoveryRevealValue: []byte(recoveryRevealValue),
-		NextUpdateRevealValue:   []byte(updateRevealValue),
-		MultihashCode:           sha2_256,
+		OpaqueDocument:     string(doc),
+		RecoveryCommitment: recoveryCommitment,
+		UpdateCommitment:   updateCommitment,
+		MultihashCode:      sha2_256,
 	})
 }
 
 func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byte, error) {
-	newPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
 	}
 
-	newRecoveryPublicKey, err := pubkey.GetPublicKeyJWK(&newPrivateKey.PublicKey)
+	updateKey, updateCommitment, err := generateKeyAndCommitment()
+	if err != nil {
+		return nil, err
+	}
+
+	// recovery key and signer passed in are generated during previous operations
+	recoveryPubKey, err := pubkey.GetPublicKeyJWK(&d.recoveryKey.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 
 	recoverRequest, err := helper.NewRecoverRequest(&helper.RecoverRequestInfo{
-		DidSuffix:               uniqueSuffix,
-		OpaqueDocument:          string(doc),
-		RecoveryKey:             newRecoveryPublicKey,
-		RecoveryRevealValue:     []byte(recoveryRevealValue),
-		NextRecoveryRevealValue: []byte(recoveryRevealValue),
-		NextUpdateRevealValue:   []byte(updateRevealValue),
-		MultihashCode:           sha2_256,
-		Signer:                  d.recoveryKeySigner, // sign with old signer
+		DidSuffix:          uniqueSuffix,
+		OpaqueDocument:     string(doc),
+		RecoveryKey:        recoveryPubKey,
+		RecoveryCommitment: recoveryCommitment,
+		UpdateCommitment:   updateCommitment,
+		MultihashCode:      sha2_256,
+		Signer:             ecsigner.New(d.recoveryKey, "ES256", ""), // sign with old signer
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	// update recovery key singer for subsequent requests
-	d.recoveryKeySigner = ecsigner.New(newPrivateKey, "ES256", "")
+	// update recovery and update key for subsequent requests
+	d.recoveryKey = recoveryKey
+	d.updateKey = updateKey
 
 	return recoverRequest, nil
 }
@@ -412,22 +409,67 @@ func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
 }
 
 func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
+	// recovery key and signer passed in are generated during previous operations
+	recoveryPubKey, err := pubkey.GetPublicKeyJWK(&d.recoveryKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
 	return helper.NewDeactivateRequest(&helper.DeactivateRequestInfo{
-		DidSuffix:           did,
-		RecoveryRevealValue: []byte(recoveryRevealValue),
-		Signer:              d.recoveryKeySigner,
+		DidSuffix:   did,
+		RecoveryKey: recoveryPubKey,
+		Signer:      ecsigner.New(d.recoveryKey, "ES256", ""),
 	})
 }
 
 func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
-	return helper.NewUpdateRequest(&helper.UpdateRequestInfo{
-		DidSuffix:             did,
-		UpdateRevealValue:     []byte(updateRevealValue),
-		NextUpdateRevealValue: []byte(updateRevealValue),
-		Patch:                 updatePatch,
-		MultihashCode:         sha2_256,
-		Signer:                d.updateKeySigner,
+	updateKey, updateCommitment, err := generateKeyAndCommitment()
+	if err != nil {
+		return nil, err
+	}
+
+	// update key and signer passed in are generated during previous operations
+	updatePubKey, err := pubkey.GetPublicKeyJWK(&d.updateKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := helper.NewUpdateRequest(&helper.UpdateRequestInfo{
+		DidSuffix:        did,
+		UpdateCommitment: updateCommitment,
+		UpdateKey:        updatePubKey,
+		Patch:            updatePatch,
+		MultihashCode:    sha2_256,
+		Signer:           ecsigner.New(d.updateKey, "ES256", "update-kid"),
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// update update key for subsequent update requests
+	d.updateKey = updateKey
+
+	return req, nil
+}
+
+func generateKeyAndCommitment() (*ecdsa.PrivateKey, string, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, "", err
+	}
+
+	pubKey, err := pubkey.GetPublicKeyJWK(&key.PublicKey)
+	if err != nil {
+		return nil, "", err
+	}
+
+	c, err := commitment.Calculate(pubKey, sha2_256)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return key, c, nil
 }
 
 func getJSONPatch(path, value string) (patch.Patch, error) {
@@ -461,17 +503,6 @@ func getRemoveServiceEndpointsPatch(keyID string) (patch.Patch, error) {
 }
 
 func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
-	// create operations key (used for document updates)
-	opsPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	opsPubKey, err := getPubKey(&opsPrivateKey.PublicKey)
-	if err != nil {
-		return nil, err
-	}
-
 	// create general + auth JWS verification key
 	jwsPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -494,14 +525,12 @@ func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 		return nil, err
 	}
 
-	data := fmt.Sprintf(docTemplate, keyID, opsPubKey, jwsPubKey, ed25519PubKey)
+	data := fmt.Sprintf(docTemplate, keyID, jwsPubKey, ed25519PubKey)
 
 	doc, err := document.FromBytes([]byte(data))
 	if err != nil {
 		return nil, err
 	}
-
-	d.updateKeySigner = ecsigner.New(opsPrivateKey, "ES256", keyID)
 
 	return doc.Bytes()
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
 	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
-	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 	"github.com/trustbloc/sidetree-core-go/pkg/txnhandler/models"
@@ -117,11 +116,7 @@ func (m mockOperationStoreClient) Put(ops []*batch.Operation) error {
 func getSuffixData() string {
 	model := &model.SuffixDataModel{
 		DeltaHash: getEncodedMultihash([]byte(validDoc)),
-		RecoveryKey: &jws.JWK{
-			Kty: "kty",
-			Crv: "crv",
-			X:   "x",
-		},
+
 		RecoveryCommitment: getEncodedMultihash([]byte("commitment")),
 	}
 

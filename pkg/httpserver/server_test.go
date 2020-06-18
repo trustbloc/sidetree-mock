@@ -18,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
@@ -257,14 +258,22 @@ func (h *sampleResolveHandler) Handler() common.HTTPRequestHandler {
 }
 
 func getCreateRequest() ([]byte, error) {
+	testKey := &jws.JWK{
+		Crv: "crv",
+		Kty: "kty",
+		X:   "x",
+	}
+
+	c, err := commitment.Calculate(testKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
 	info := &helper.CreateRequestInfo{
-		OpaqueDocument: validDoc,
-		RecoveryKey: &jws.JWK{
-			Kty: "kty",
-			Crv: "crv",
-			X:   "x",
-		},
-		MultihashCode: sha2_256,
+		OpaqueDocument:     validDoc,
+		RecoveryCommitment: c,
+		UpdateCommitment:   c,
+		MultihashCode:      sha2_256,
 	}
 	return helper.NewCreateRequest(info)
 }

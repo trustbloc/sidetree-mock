@@ -75,7 +75,7 @@ func main() {
 		ctx.Protocol(),
 		didvalidator.New(ctx.OperationStore()),
 		batchWriter,
-		processor.New(didDocNamespace, ctx.OperationStore()),
+		processor.New(didDocNamespace, ctx.OperationStore(), mocks.NewMockProtocolClient()),
 	)
 
 	restSvc := httpserver.New(
