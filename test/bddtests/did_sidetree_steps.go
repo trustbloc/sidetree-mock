@@ -13,6 +13,8 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -39,13 +41,13 @@ const (
 	testDocumentResolveURL = "https://localhost:48326/sidetree/0.0.1/identifiers"
 	testDocumentUpdateURL  = "https://localhost:48326/sidetree/0.0.1/operations"
 
-	sha2_256            = 18
+	sha2_256 = 18
 )
 
 const addPublicKeysTemplate = `[
 	{
       "id": "%s",
-      "usage": ["general"],
+      "purpose": ["general"],
       "type": "JwsVerificationKey2020",
       "jwk": {
         "kty": "EC",
@@ -62,7 +64,7 @@ const addServicesTemplate = `[
     {
       "id": "%s",
       "type": "SecureDataStore",
-      "serviceEndpoint": "http://hub.my-personal-server.com"
+      "endpoint": "http://hub.my-personal-server.com"
     }
   ]`
 
@@ -73,13 +75,13 @@ const docTemplate = `{
    {
      "id": "%s",
      "type": "JwsVerificationKey2020",
-     "usage": ["auth", "general"],
+     "purpose": ["auth", "general"],
      "jwk": %s
    },
    {
      "id": "dual-assertion-gen",
      "type": "Ed25519VerificationKey2018",
-     "usage": ["assertion", "general"],
+     "purpose": ["assertion", "general"],
      "jwk": %s
    }
   ],
@@ -87,23 +89,23 @@ const docTemplate = `{
 	{
 	   "id": "oidc",
 	   "type": "OpenIdConnectVersion1.0Service",
-	   "serviceEndpoint": "https://openid.example.com/"
+	   "endpoint": "https://openid.example.com/"
 	}, 
 	{
 	   "id": "hub",
 	   "type": "HubService",
-	   "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
+	   "endpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
 	}
   ]
 }`
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	createRequest     model.CreateRequest
-	recoveryKey       *ecdsa.PrivateKey
-	updateKey         *ecdsa.PrivateKey
-	resp              *restclient.HttpRespone
-	bddContext        *BDDContext
+	createRequest model.CreateRequest
+	recoveryKey   *ecdsa.PrivateKey
+	updateKey     *ecdsa.PrivateKey
+	resp          *restclient.HttpRespone
+	bddContext    *BDDContext
 }
 
 // NewDIDSideSteps
@@ -549,6 +551,42 @@ func getPubKey(pubKey interface{}) (string, error) {
 	return string(opsPubKeyBytes), nil
 }
 
+func (d *DIDSideSteps) processInteropRequest(path string) error {
+	var err error
+
+	logger.Infof("processing interop request from '%s'", path)
+
+	reqBytes, err := readInteropRequest(path)
+	if err != nil {
+		return err
+	}
+
+	var req model.CreateRequest
+	err = json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return err
+	}
+
+	if req.Operation == model.OperationTypeCreate {
+		d.createRequest = req
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, reqBytes)
+	return err
+}
+
+func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
+	var err error
+
+	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + interopResolveDidWithInitialState)
+	return err
+}
+
+func readInteropRequest(requestPath string) ([]byte, error) {
+	r, _ := os.Open(requestPath)
+	return ioutil.ReadAll(r)
+}
+
 func wait(seconds int) error {
 	logger.Infof("Waiting [%d] seconds\n", seconds)
 	time.Sleep(time.Duration(seconds) * time.Second)
@@ -581,5 +619,9 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
+	s.Step(`^client sends interop operation request from "([^"]*)"$`, d.processInteropRequest)
+	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
+
+const interopResolveDidWithInitialState = `did:sidetree:test:EiBFsUlzmZ3zJtSFeQKwJNtngjmB51ehMWWDuptf9b4Bag?-sidetree-initial-state=eyJkZWx0YV9oYXNoIjoiRWlCWE00b3RMdVAyZkc0WkE3NS1hbnJrV1ZYMDYzN3hadE1KU29Lb3AtdHJkdyIsInJlY292ZXJ5X2NvbW1pdG1lbnQiOiJFaUM4RzRJZGJEN0Q0Q281N0dqTE5LaG1ERWFicnprTzF3c0tFOU1RZVV2T2d3In0.eyJ1cGRhdGVfY29tbWl0bWVudCI6IkVpQ0lQY1hCempqUWFKVUljUjUyZXVJMHJJWHpoTlpfTWxqc0tLOXp4WFR5cVEiLCJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljX2tleXMiOlt7ImlkIjoic2lnbmluZ0tleSIsInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkiLCJqd2siOnsia3R5IjoiRUMiLCJjcnYiOiJzZWNwMjU2azEiLCJ4IjoieTlrenJWQnFYeDI0c1ZNRVFRazRDZS0wYnFaMWk1VHd4bGxXQ2t6QTd3VSIsInkiOiJjMkpIeFFxVVV0eVdJTEFJaWNtcEJHQzQ3UGdtSlQ0NjV0UG9jRzJxMThrIn0sInB1cnBvc2UiOlsiYXV0aCIsImdlbmVyYWwiXX1dLCJzZXJ2aWNlX2VuZHBvaW50cyI6W3siaWQiOiJzZXJ2aWNlRW5kcG9pbnRJZDEyMyIsInR5cGUiOiJzb21lVHlwZSIsImVuZHBvaW50IjoiaHR0cHM6Ly93d3cudXJsLmNvbSJ9XX19XX0`
