@@ -52,7 +52,7 @@ sidetree-mock:
 	@mkdir -p ./.build/bin
 	@go build -o ./.build/bin/sidetree-mock cmd/sidetree-server/main.go
 
-sidetree-mock-docker: sidetree-mock
+sidetree-mock-docker:
 	@docker build -f ./images/sidetree-mock/Dockerfile --no-cache -t $(DOCKER_OUTPUT_NS)/$(SIDETREE_MOCK_IMAGE_NAME):latest \
 	--build-arg GO_VER=$(GO_VER) \
 	--build-arg ALPINE_VER=$(ALPINE_VER) \

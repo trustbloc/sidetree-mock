@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/mr-tron/base58"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -92,9 +93,12 @@ const docTemplate = `{
 	   "endpoint": "https://openid.example.com/"
 	}, 
 	{
-	   "id": "hub",
-	   "type": "HubService",
-	   "endpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/"
+	   "id": "didcomm",
+	   "type": "did-communication",
+	   "endpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/",
+	   "recipientKeys": ["%s"],
+	   "routingKeys": ["%s"],
+	   "priority": 0
 	}
   ]
 }`
@@ -527,7 +531,19 @@ func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 		return nil, err
 	}
 
-	data := fmt.Sprintf(docTemplate, keyID, jwsPubKey, ed25519PubKey)
+	recipientKey, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	routingKey, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	data := fmt.Sprintf(
+		docTemplate,
+		keyID, jwsPubKey, ed25519PubKey, base58.Encode(recipientKey), base58.Encode(routingKey))
 
 	doc, err := document.FromBytes([]byte(data))
 	if err != nil {
