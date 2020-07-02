@@ -7,9 +7,10 @@ module github.com/trustbloc/sidetree-mock/test/bddtests
 require (
 	github.com/cucumber/godog v0.8.1
 	github.com/fsouza/go-dockerclient v1.3.0
+	github.com/mr-tron/base58 v1.1.3
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0
-	github.com/trustbloc/sidetree-core-go v0.1.4-0.20200624222705-2d864f12d04e
+	github.com/trustbloc/sidetree-core-go v0.1.4-0.20200702215916-b02022f5ec37
 )
 
 go 1.13
