@@ -29,7 +29,7 @@ func TestStartObserver(t *testing.T) {
 		txNum := make(map[uint64]*struct{}, 0)
 		hits := 0
 
-		opStore := &mockOperationStoreClient{putFunc: func(ops []*batch.Operation) error {
+		opStore := &mockOperationStoreClient{putFunc: func(ops []*batch.AnchoredOperation) error {
 			rw.Lock()
 			defer rw.Unlock()
 
@@ -103,10 +103,10 @@ func (m mockCASClient) Read(key string) ([]byte, error) {
 }
 
 type mockOperationStoreClient struct {
-	putFunc func(ops []*batch.Operation) error
+	putFunc func(ops []*batch.AnchoredOperation) error
 }
 
-func (m mockOperationStoreClient) Put(ops []*batch.Operation) error {
+func (m mockOperationStoreClient) Put(ops []*batch.AnchoredOperation) error {
 	if m.putFunc != nil {
 		return m.putFunc(ops)
 	}
