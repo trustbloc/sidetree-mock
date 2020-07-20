@@ -55,10 +55,9 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
 // Start starts observer routines
 func Start(blockchainClient batch.BlockchainClient, cas cas.Client, operationStoreProvider sidetreeobserver.OperationStoreProvider, pcp protocol.ClientProvider) {
 	providers := &sidetreeobserver.Providers{
-		Ledger:           &ledger{blockChainClient: blockchainClient},
-		TxnOpsProvider:   txnhandler.NewOperationProvider(cas, pcp, compression.New(compression.WithDefaultAlgorithms())),
-		OpStoreProvider:  operationStoreProvider,
-		OpFilterProvider: &sidetreeobserver.NoopOperationFilterProvider{},
+		Ledger:          &ledger{blockChainClient: blockchainClient},
+		TxnOpsProvider:  txnhandler.NewOperationProvider(cas, pcp, compression.New(compression.WithDefaultAlgorithms())),
+		OpStoreProvider: operationStoreProvider,
 	}
 
 	sidetreeobserver.New(providers).Start()
