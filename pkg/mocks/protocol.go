@@ -30,6 +30,7 @@ func NewMockProtocolClient() *MockProtocolClient {
 		MaxChunkFileSize:             maxBatchFileSize,
 		MaxMapFileSize:               maxBatchFileSize,
 		MaxAnchorFileSize:            maxBatchFileSize,
+		EnableReplacePatch:           true,
 	}
 
 	// has to be sorted for mock client to work
