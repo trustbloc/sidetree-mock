@@ -13,13 +13,13 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/mr-tron/base58"
 	"io/ioutil"
-	"os"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/cucumber/godog"
+	"github.com/mr-tron/base58"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -37,7 +37,7 @@ import (
 var logger = logrus.New()
 
 const (
-	didDocNamespace        = "did:sidetree:test"
+	didDocNamespace        = "did:sidetree"
 	initialStateParam      = "?-sidetree-initial-state="
 	testDocumentResolveURL = "https://localhost:48326/sidetree/0.0.1/identifiers"
 	testDocumentUpdateURL  = "https://localhost:48326/sidetree/0.0.1/operations"
@@ -567,12 +567,12 @@ func getPubKey(pubKey interface{}) (string, error) {
 	return string(opsPubKeyBytes), nil
 }
 
-func (d *DIDSideSteps) processInteropRequest(path string) error {
+func (d *DIDSideSteps) processRequest(path string) error {
 	var err error
 
-	logger.Infof("processing interop request from '%s'", path)
+	logger.Infof("processing request from '%s'", path)
 
-	reqBytes, err := readInteropRequest(path)
+	reqBytes, err := readRequest(path)
 	if err != nil {
 		return err
 	}
@@ -598,9 +598,154 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	return err
 }
 
-func readInteropRequest(requestPath string) ([]byte, error) {
-	r, _ := os.Open(requestPath)
-	return ioutil.ReadAll(r)
+func (d *DIDSideSteps) validateResolutionResult(url string) error {
+	if d.resp.ErrorMsg != "" {
+		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
+	}
+
+	body, err := readRequest(url)
+	if err != nil {
+		return err
+	}
+
+	var expected document.ResolutionResult
+	err = json.Unmarshal(body, &expected)
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(&expected)
+
+	var result document.ResolutionResult
+	err = json.Unmarshal(d.resp.Payload, &result)
+	if err != nil {
+		return err
+	}
+
+	prettyPrint(&result)
+
+	err = validateMetadata(expected.MethodMetadata, result.MethodMetadata)
+	if err != nil {
+		return err
+	}
+
+	expectedDoc := document.DidDocumentFromJSONLDObject(expected.Document)
+	doc := document.DidDocumentFromJSONLDObject(result.Document)
+
+	err = validateDocument(expectedDoc, doc)
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("successfully validated did document: %s", doc.ID())
+
+	return nil
+}
+
+func validateDocument(expected, doc document.DIDDocument) error {
+	if expected.ID() != doc.ID() {
+		return fmt.Errorf("id mismatch: expected[%s], got[%s]", expected.ID(), doc.ID())
+	}
+
+	if len(expected.PublicKeys()) != len(doc.PublicKeys()) {
+		return fmt.Errorf("public keys mismatch: expected[%d], got[%d]", len(expected.PublicKeys()), len(doc.PublicKeys()))
+	}
+
+	for i := 0; i < len(expected.PublicKeys()); i++ {
+		err := validateKey(expected.PublicKeys()[i], doc.PublicKeys()[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(expected.Services()) != len(doc.Services()) {
+		return fmt.Errorf("services mismatch: expected[%d], got[%d]", len(expected.Services()), len(doc.Services()))
+	}
+
+	for i := 0; i < len(expected.Services()); i++ {
+		err := validateService(expected.Services()[i], doc.Services()[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateKey(expected, key document.PublicKey) error {
+	if !strings.Contains(key.ID(), expected.ID()) {
+		return fmt.Errorf("public key id mismatch: expected[%s], got[%s]", expected.ID(), key.ID())
+	}
+
+	if key.Type() != expected.Type() {
+		return fmt.Errorf("public key type mismatch: expected[%s], got[%s]", expected.Type(), key.Type())
+	}
+
+	if expected.PublicKeyJwk().Crv() != key.PublicKeyJwk().Crv() {
+		return fmt.Errorf("crv mismatch: expected[%s], got[%s]", expected.PublicKeyJwk().Crv(), key.PublicKeyJwk().Crv())
+	}
+
+	if expected.PublicKeyJwk().Kty() != key.PublicKeyJwk().Kty() {
+		return fmt.Errorf("kty mismatch: expected[%s], got[%s]", expected.PublicKeyJwk().Kty(), key.PublicKeyJwk().Kty())
+	}
+
+	if expected.PublicKeyJwk().X() != key.PublicKeyJwk().X() {
+		return fmt.Errorf("x mismatch: expected[%s], got[%s]", expected.PublicKeyJwk().X(), key.PublicKeyJwk().X())
+	}
+
+	if expected.PublicKeyJwk().Y() != key.PublicKeyJwk().Y() {
+		return fmt.Errorf("y mismatch: expected[%s], got[%s]", expected.PublicKeyJwk().Y(), key.PublicKeyJwk().Y())
+	}
+
+	return nil
+}
+
+func validateService(expected, service document.Service) error {
+	if !strings.Contains(service.ID(), expected.ID()) {
+		return fmt.Errorf("service id mismatch: expected[%s], got[%s]", expected.ID(), service.ID())
+	}
+
+	if expected.Type() != service.Type() {
+		return fmt.Errorf("service type mismatch: expected[%s], got[%s]", expected.Type(), service.Type())
+	}
+
+	if expected.ServiceEndpoint() != service.ServiceEndpoint() {
+		return fmt.Errorf("service endpoint mismatch: expected[%s], got[%s]", expected.Type(), service.Type())
+	}
+
+	return nil
+}
+
+func validateMetadata(expected, metadata document.MethodMetadata) error {
+	if expected.RecoveryCommitment != metadata.RecoveryCommitment {
+		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected.RecoveryCommitment, metadata.RecoveryCommitment)
+	}
+
+	if expected.UpdateCommitment != metadata.UpdateCommitment {
+		return fmt.Errorf("update commitment mismatch: expected[%s], got[%s]", expected.UpdateCommitment, metadata.UpdateCommitment)
+	}
+
+	// TODO: published is still not implemented by reference application
+
+	return nil
+}
+
+func readRequest(url string) ([]byte, error) {
+	client := &http.Client{}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body failed: %w", err)
+	}
+	if status := resp.StatusCode; status != http.StatusOK {
+		return nil, errors.New(string(body))
+	}
+	return body, nil
 }
 
 func wait(seconds int) error {
@@ -635,9 +780,10 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
-	s.Step(`^client sends interop operation request from "([^"]*)"$`, d.processInteropRequest)
+	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
+	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
 
-const interopResolveDidWithInitialState = `did:sidetree:test:EiBFsUlzmZ3zJtSFeQKwJNtngjmB51ehMWWDuptf9b4Bag?-sidetree-initial-state=eyJkZWx0YV9oYXNoIjoiRWlCWE00b3RMdVAyZkc0WkE3NS1hbnJrV1ZYMDYzN3hadE1KU29Lb3AtdHJkdyIsInJlY292ZXJ5X2NvbW1pdG1lbnQiOiJFaUM4RzRJZGJEN0Q0Q281N0dqTE5LaG1ERWFicnprTzF3c0tFOU1RZVV2T2d3In0.eyJ1cGRhdGVfY29tbWl0bWVudCI6IkVpQ0lQY1hCempqUWFKVUljUjUyZXVJMHJJWHpoTlpfTWxqc0tLOXp4WFR5cVEiLCJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljX2tleXMiOlt7ImlkIjoic2lnbmluZ0tleSIsInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkiLCJqd2siOnsia3R5IjoiRUMiLCJjcnYiOiJzZWNwMjU2azEiLCJ4IjoieTlrenJWQnFYeDI0c1ZNRVFRazRDZS0wYnFaMWk1VHd4bGxXQ2t6QTd3VSIsInkiOiJjMkpIeFFxVVV0eVdJTEFJaWNtcEJHQzQ3UGdtSlQ0NjV0UG9jRzJxMThrIn0sInB1cnBvc2UiOlsiYXV0aCIsImdlbmVyYWwiXX1dLCJzZXJ2aWNlX2VuZHBvaW50cyI6W3siaWQiOiJzZXJ2aWNlRW5kcG9pbnRJZDEyMyIsInR5cGUiOiJzb21lVHlwZSIsImVuZHBvaW50IjoiaHR0cHM6Ly93d3cudXJsLmNvbSJ9XX19XX0`
+const interopResolveDidWithInitialState = `did:sidetree:EiBFsUlzmZ3zJtSFeQKwJNtngjmB51ehMWWDuptf9b4Bag?-sidetree-initial-state=eyJkZWx0YV9oYXNoIjoiRWlCWE00b3RMdVAyZkc0WkE3NS1hbnJrV1ZYMDYzN3hadE1KU29Lb3AtdHJkdyIsInJlY292ZXJ5X2NvbW1pdG1lbnQiOiJFaUM4RzRJZGJEN0Q0Q281N0dqTE5LaG1ERWFicnprTzF3c0tFOU1RZVV2T2d3In0.eyJ1cGRhdGVfY29tbWl0bWVudCI6IkVpQ0lQY1hCempqUWFKVUljUjUyZXVJMHJJWHpoTlpfTWxqc0tLOXp4WFR5cVEiLCJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljX2tleXMiOlt7ImlkIjoic2lnbmluZ0tleSIsInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkiLCJqd2siOnsia3R5IjoiRUMiLCJjcnYiOiJzZWNwMjU2azEiLCJ4IjoieTlrenJWQnFYeDI0c1ZNRVFRazRDZS0wYnFaMWk1VHd4bGxXQ2t6QTd3VSIsInkiOiJjMkpIeFFxVVV0eVdJTEFJaWNtcEJHQzQ3UGdtSlQ0NjV0UG9jRzJxMThrIn0sInB1cnBvc2UiOlsiYXV0aCIsImdlbmVyYWwiXX1dLCJzZXJ2aWNlX2VuZHBvaW50cyI6W3siaWQiOiJzZXJ2aWNlRW5kcG9pbnRJZDEyMyIsInR5cGUiOiJzb21lVHlwZSIsImVuZHBvaW50IjoiaHR0cHM6Ly93d3cudXJsLmNvbSJ9XX19XX0`
