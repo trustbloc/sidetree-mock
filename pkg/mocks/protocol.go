@@ -31,6 +31,8 @@ func NewMockProtocolClient() *MockProtocolClient {
 		MaxMapFileSize:               maxBatchFileSize,
 		MaxAnchorFileSize:            maxBatchFileSize,
 		EnableReplacePatch:           true,
+		SignatureAlgorithms:          []string{"EdDSA", "ES256", "ES256K"},
+		KeyAlgorithms:                []string{"Ed25519", "P-256", "secp256k1"},
 	}
 
 	// has to be sorted for mock client to work
