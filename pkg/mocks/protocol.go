@@ -22,10 +22,10 @@ type MockProtocolClient struct {
 // NewMockProtocolClient creates mocks protocol client
 func NewMockProtocolClient() *MockProtocolClient {
 	latest := protocol.Protocol{
-		StartingBlockChainTime:       0,
+		GenesisTime:                  0,
 		HashAlgorithmInMultiHashCode: 18,
-		MaxOperationsPerBatch:        1, // one operation per batch - batch gets cut right away
-		MaxDeltaByteSize:             200000,
+		MaxOperationCount:            1, // one operation per batch - batch gets cut right away
+		MaxOperationSize:             200000,
 		CompressionAlgorithm:         "GZIP",
 		MaxChunkFileSize:             maxBatchFileSize,
 		MaxMapFileSize:               maxBatchFileSize,
@@ -49,7 +49,7 @@ func (m *MockProtocolClient) Current() protocol.Protocol {
 // Get mocks getting protocol version based on blockchain(transaction) time
 func (m *MockProtocolClient) Get(transactionTime uint64) (protocol.Protocol, error) {
 	for i := len(m.protocols) - 1; i >= 0; i-- {
-		if transactionTime >= m.protocols[i].StartingBlockChainTime {
+		if transactionTime >= m.protocols[i].GenesisTime {
 			return m.protocols[i], nil
 		}
 	}

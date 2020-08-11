@@ -49,7 +49,7 @@ const addPublicKeysTemplate = `[
 	{
       "id": "%s",
       "purpose": ["general"],
-      "type": "JwsVerificationKey2020",
+      "type": "JsonWebKey2020",
       "jwk": {
         "kty": "EC",
         "crv": "P-256K",
@@ -75,7 +75,7 @@ const docTemplate = `{
   "publicKey": [
    {
      "id": "%s",
-     "type": "JwsVerificationKey2020",
+     "type": "JsonWebKey2020",
      "purpose": ["auth", "general"],
      "jwk": %s
    },
