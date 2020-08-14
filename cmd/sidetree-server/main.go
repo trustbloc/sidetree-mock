@@ -34,6 +34,7 @@ var config = viper.New()
 
 const defaultDIDDocNamespace = "did:sidetree"
 const basePath = "/sidetree/0.0.1"
+const ctxDelimiter = ","
 
 func main() {
 	config.SetEnvPrefix("SIDETREE_MOCK")
@@ -56,6 +57,11 @@ func main() {
 		didDocNamespace = config.GetString("did.namespace")
 	}
 
+	var methodCtx []string
+	if config.GetString("did.method.context") != "" {
+		methodCtx = strings.Split(config.GetString("did.method.context"), ctxDelimiter)
+	}
+
 	// create new batch writer
 	batchWriter, err := batch.New(didDocNamespace, ctx)
 	if err != nil {
@@ -73,7 +79,7 @@ func main() {
 	didDocHandler := dochandler.New(
 		didDocNamespace,
 		ctx.Protocol(),
-		didvalidator.New(ctx.OperationStore()),
+		didvalidator.New(ctx.OperationStore(), didvalidator.WithMethodContext(methodCtx)),
 		batchWriter,
 		processor.New(didDocNamespace, ctx.OperationStore(), mocks.NewMockProtocolClient()),
 	)
