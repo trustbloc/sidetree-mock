@@ -42,8 +42,8 @@ func NewMockProtocolClient() *MockProtocolClient {
 }
 
 // Current mocks getting last protocol version
-func (m *MockProtocolClient) Current() protocol.Protocol {
-	return m.protocols[len(m.protocols)-1]
+func (m *MockProtocolClient) Current() (protocol.Protocol, error) {
+	return m.protocols[len(m.protocols)-1], nil
 }
 
 // Get mocks getting protocol version based on blockchain(transaction) time
