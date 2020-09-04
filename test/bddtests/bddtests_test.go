@@ -21,10 +21,15 @@ import (
 var composition *Composition
 
 func TestMain(m *testing.M) {
-
 	// default is to run all tests with tag @all
 	tags := "all"
+
+	if os.Getenv("TAGS") != "" {
+		tags = os.Getenv("TAGS")
+	}
+
 	flag.Parse()
+
 	cmdTags := flag.CommandLine.Lookup("test.run")
 	if cmdTags != nil && cmdTags.Value != nil && cmdTags.Value.String() != "" {
 		tags = cmdTags.Value.String()
@@ -46,12 +51,11 @@ func TestMain(m *testing.M) {
 
 				composition = newComposition
 
-				fmt.Println("docker-compose up ... waiting for peer to start ...")
 				testSleep := 5
 				if os.Getenv("TEST_SLEEP") != "" {
 					testSleep, _ = strconv.Atoi(os.Getenv("TEST_SLEEP"))
 				}
-				fmt.Printf("*** testSleep=%d", testSleep)
+				fmt.Println(fmt.Sprintf("docker-compose up with tags=%s ... waiting for peer to start for %d seconds", tags, testSleep))
 				time.Sleep(time.Second * time.Duration(testSleep))
 			}
 

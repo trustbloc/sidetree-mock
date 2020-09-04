@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-@all
+# Each test has to be run on fresh system since create document is the same for all tests
 @did-interop
 Feature:
 
