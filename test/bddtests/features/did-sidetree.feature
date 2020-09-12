@@ -13,14 +13,16 @@ Feature:
     When client sends request to create DID document
     Then check success response contains "#didDocumentHash"
     # retrieve document with initial value before it becomes available on the ledger
-    When client sends request to resolve DID document with initial value
+    When client sends request to resolve DID document with initial state "value"
+    Then check success response contains "#didDocumentHash"
+    When client sends request to resolve DID document with initial state "parameter"
     Then check success response contains "#didDocumentHash"
     # we wait until observer poll sidetree txn from ledger
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#didDocumentHash"
     # retrieve document with initial value after it becomes available on the ledger
-    When client sends request to resolve DID document with initial value
+    When client sends request to resolve DID document with initial state "value"
     Then check success response contains "#didDocumentHash"
 
   @create_deactivate_did_doc
