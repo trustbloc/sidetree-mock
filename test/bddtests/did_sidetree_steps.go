@@ -38,8 +38,10 @@ import (
 var logger = logrus.New()
 
 const (
-	didDocNamespace        = "did:sidetree"
-	initialStateParam      = "?-sidetree-initial-state="
+	didDocNamespace       = "did:sidetree"
+	initialStateParam     = "?-sidetree-initial-state="
+	initialStateSeparator = ":"
+
 	testDocumentResolveURL = "https://localhost:48326/sidetree/0.0.1/identifiers"
 	testDocumentUpdateURL  = "https://localhost:48326/sidetree/0.0.1/operations"
 
@@ -327,7 +329,7 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	return err
 }
 
-func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
+func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue(mode string) error {
 	did, err := d.getDID()
 	if err != nil {
 		return err
@@ -335,7 +337,16 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 
 	initialState := d.createRequest.SuffixData + "." + d.createRequest.Delta
 
-	req := testDocumentResolveURL + "/" + did + initialStateParam + initialState
+	var req string
+	switch mode {
+	case "parameter":
+		req = testDocumentResolveURL + "/" + did + initialStateParam + initialState
+	case "value":
+		req = testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
+	default:
+		return fmt.Errorf("mode '%s' not supported", mode)
+	}
+
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
 }
@@ -780,7 +791,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
-	s.Step(`^client sends request to resolve DID document with initial value$`, d.resolveDIDDocumentWithInitialValue)
+	s.Step(`^client sends request to resolve DID document with initial state "([^"]*)"$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
