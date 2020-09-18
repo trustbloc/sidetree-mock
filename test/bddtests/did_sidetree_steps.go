@@ -106,6 +106,16 @@ const docTemplate = `{
   ]
 }`
 
+const errorPatch = `[
+{
+"op": "move",
+"path": "/test",
+"value": "new value"
+}
+]`
+
+var emptyJson = []byte("{}")
+
 // DIDSideSteps
 type DIDSideSteps struct {
 	createRequest model.CreateRequest
@@ -130,7 +140,7 @@ func (d *DIDSideSteps) createDIDDocument() error {
 		return err
 	}
 
-	req, err := d.getCreateRequest(opaqueDoc)
+	req, err := d.getCreateRequest(opaqueDoc, nil)
 	if err != nil {
 		return err
 	}
@@ -144,7 +154,54 @@ func (d *DIDSideSteps) createDIDDocument() error {
 	return err
 }
 
-func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
+func (d *DIDSideSteps) createDIDDocumentWithError(errType string) error {
+	var err error
+
+	logger.Infof("create did document with '%s' error", errType)
+
+	var req model.CreateRequest
+	switch errType {
+	case "request":
+		// this error will be caught during create request validation
+		p, err := getAddPublicKeysPatch("createKey")
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getCreateRequestModel([]byte(""), []patch.Patch{p})
+		if err != nil {
+			return err
+		}
+
+		req.Delta = docutil.EncodeToString(emptyJson)
+	case "patch":
+		// for create operation patch errors get caught during request time
+		p, err := patch.NewJSONPatch(errorPatch)
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getCreateRequestModel([]byte(""), []patch.Patch{p})
+		if err != nil {
+			return err
+		}
+
+	default:
+		return fmt.Errorf("error type '%s' not supported", errType)
+	}
+
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	d.createRequest = req
+
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
+	return err
+}
+
+func (d *DIDSideSteps) updateDIDDocument(patches []patch.Patch) error {
 	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return err
@@ -152,12 +209,68 @@ func (d *DIDSideSteps) updateDIDDocument(patch patch.Patch) error {
 
 	logger.Infof("update did document: %s", uniqueSuffix)
 
-	req, err := d.getUpdateRequest(uniqueSuffix, patch)
+	req, err := d.getUpdateRequest(uniqueSuffix, patches)
 	if err != nil {
 		return err
 	}
 
 	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
+	return err
+}
+
+func (d *DIDSideSteps) updateDIDDocumentWithError(errType string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("update did document [%s] with '%s' error", uniqueSuffix, errType)
+
+	var req model.UpdateRequest
+	switch errType {
+	case "request":
+		// this error will be caught during update request validation
+
+		p, err := getAddPublicKeysPatch("keyID")
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getUpdateRequestModel(uniqueSuffix, []patch.Patch{p})
+		if err != nil {
+			return err
+		}
+
+		req.Delta = docutil.EncodeToString(emptyJson)
+	case "resolution":
+		// apply patch error will be caught during resolution (while applying operations)
+
+		removeKey, err := getRemovePublicKeysPatch("createKey")
+		if err != nil {
+			return err
+		}
+
+		// patch that will cause an error
+		jsonPatchWithErr, err := patch.NewJSONPatch(errorPatch)
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getUpdateRequestModel(uniqueSuffix, []patch.Patch{removeKey, jsonPatchWithErr})
+		if err != nil {
+			return err
+		}
+
+	default:
+		return fmt.Errorf("error type '%s' not supported", errType)
+	}
+
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
 	return err
 }
 
@@ -191,7 +304,7 @@ func (d *DIDSideSteps) recoverDIDDocument() error {
 		return err
 	}
 
-	req, err := d.getRecoverRequest(opaqueDoc, uniqueSuffix)
+	req, err := d.getRecoverRequest(opaqueDoc, nil, uniqueSuffix)
 	if err != nil {
 		return err
 	}
@@ -200,49 +313,98 @@ func (d *DIDSideSteps) recoverDIDDocument() error {
 	return err
 }
 
-func (d *DIDSideSteps) updateDIDDocumentWithJSONPatch(path, value string) error {
-	patch, err := getJSONPatch(path, value)
+func (d *DIDSideSteps) recoverDIDDocumentWithError(errType string) error {
+	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return err
 	}
 
-	return d.updateDIDDocument(patch)
+	logger.Infof("recover did document [%s] with '%s' error", uniqueSuffix, errType)
+
+	var req model.RecoverRequest
+	switch errType {
+	case "request":
+		// this error will be caught during recover request validation
+		opaqueDoc, err := d.getOpaqueDocument("recoveryKey")
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getRecoverRequestModel(opaqueDoc, nil, uniqueSuffix)
+		if err != nil {
+			return err
+		}
+
+		// delta cannot be empty JSON
+		req.Delta = docutil.EncodeToString(emptyJson)
+
+	case "resolution":
+		// apply patch error will be caught during resolution
+		p, err := patch.NewJSONPatch(errorPatch)
+		if err != nil {
+			return err
+		}
+
+		req, err = d.getRecoverRequestModel([]byte(""), []patch.Patch{p}, uniqueSuffix)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("error type '%s' not supported", errType)
+	}
+
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
+	return err
+}
+
+func (d *DIDSideSteps) updateDIDDocumentWithJSONPatch(path, value string) error {
+	p, err := getJSONPatch(path, value)
+	if err != nil {
+		return err
+	}
+
+	return d.updateDIDDocument([]patch.Patch{p})
 }
 
 func (d *DIDSideSteps) addPublicKeyToDIDDocument(keyID string) error {
-	patch, err := getAddPublicKeysPatch(keyID)
+	p, err := getAddPublicKeysPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	return d.updateDIDDocument(patch)
+	return d.updateDIDDocument([]patch.Patch{p})
 }
 
 func (d *DIDSideSteps) removePublicKeyFromDIDDocument(keyID string) error {
-	patch, err := getRemovePublicKeysPatch(keyID)
+	p, err := getRemovePublicKeysPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	return d.updateDIDDocument(patch)
+	return d.updateDIDDocument([]patch.Patch{p})
 }
 
 func (d *DIDSideSteps) addServiceEndpointToDIDDocument(keyID string) error {
-	patch, err := getAddServiceEndpointsPatch(keyID)
+	p, err := getAddServiceEndpointsPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	return d.updateDIDDocument(patch)
+	return d.updateDIDDocument([]patch.Patch{p})
 }
 
 func (d *DIDSideSteps) removeServiceEndpointsFromDIDDocument(keyID string) error {
-	patch, err := getRemoveServiceEndpointsPatch(keyID)
+	p, err := getRemoveServiceEndpointsPatch(keyID)
 	if err != nil {
 		return err
 	}
 
-	return d.updateDIDDocument(patch)
+	return d.updateDIDDocument([]patch.Patch{p})
 }
 
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
@@ -273,12 +435,12 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
 
-	if msg == "#didDocumentHash" {
-		documentHash, err := d.getDID()
+	if msg == "#did" || msg == "#emptydoc" {
+		did, err := d.getDID()
 		if err != nil {
 			return err
 		}
-		msg = strings.Replace(msg, "#didDocumentHash", documentHash, -1)
+		msg = strings.Replace(msg, "#did", did, -1)
 
 		var result document.ResolutionResult
 		err = json.Unmarshal(d.resp.Payload, &result)
@@ -295,8 +457,18 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 
 		// perform basic checks on document
 		if didDoc.ID() == "" || didDoc.Context()[0] != "https://www.w3.org/ns/did/v1" ||
-			!strings.Contains(didDoc.PublicKeys()[0].Controller(), didDoc.ID()) {
+			(len(didDoc.PublicKeys()) > 0 && !strings.Contains(didDoc.PublicKeys()[0].Controller(), didDoc.ID())) {
 			return errors.New("response is not a valid did document")
+		}
+
+		if msg == "#emptydoc" {
+			if len(didDoc) > 2 { // has id and context
+				return errors.New("response is not an empty document")
+			}
+
+			logger.Info("response contains empty did document")
+
+			return nil
 		}
 
 		logger.Infof("response is a valid did document")
@@ -351,7 +523,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue(mode string) error {
 	return err
 }
 
-func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
+func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]byte, error) {
 	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
@@ -368,13 +540,29 @@ func (d *DIDSideSteps) getCreateRequest(doc []byte) ([]byte, error) {
 
 	return helper.NewCreateRequest(&helper.CreateRequestInfo{
 		OpaqueDocument:     string(doc),
+		Patches:            patches,
 		RecoveryCommitment: recoveryCommitment,
 		UpdateCommitment:   updateCommitment,
 		MultihashCode:      sha2_256,
 	})
 }
 
-func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byte, error) {
+func (d *DIDSideSteps) getCreateRequestModel(doc []byte, patches []patch.Patch) (model.CreateRequest, error) {
+	reqBytes, err := d.getCreateRequest(doc, patches)
+	if err != nil {
+		return model.CreateRequest{}, err
+	}
+
+	var req model.CreateRequest
+	err = json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return model.CreateRequest{}, err
+	}
+
+	return req, nil
+}
+
+func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniqueSuffix string) ([]byte, error) {
 	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
@@ -394,6 +582,7 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 	recoverRequest, err := helper.NewRecoverRequest(&helper.RecoverRequestInfo{
 		DidSuffix:          uniqueSuffix,
 		OpaqueDocument:     string(doc),
+		Patches:            patches,
 		RecoveryKey:        recoveryPubKey,
 		RecoveryCommitment: recoveryCommitment,
 		UpdateCommitment:   updateCommitment,
@@ -410,6 +599,21 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, uniqueSuffix string) ([]byt
 	d.updateKey = updateKey
 
 	return recoverRequest, nil
+}
+
+func (d *DIDSideSteps) getRecoverRequestModel(doc []byte, patches []patch.Patch, uniqueSuffix string) (model.RecoverRequest, error) {
+	reqBytes, err := d.getRecoverRequest(doc, patches, uniqueSuffix)
+	if err != nil {
+		return model.RecoverRequest{}, err
+	}
+
+	var req model.RecoverRequest
+	err = json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return model.RecoverRequest{}, err
+	}
+
+	return req, nil
 }
 
 func (d *DIDSideSteps) getDID() (string, error) {
@@ -440,7 +644,7 @@ func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 	})
 }
 
-func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]byte, error) {
+func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]byte, error) {
 	updateKey, updateCommitment, err := generateKeyAndCommitment()
 	if err != nil {
 		return nil, err
@@ -456,7 +660,7 @@ func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]
 		DidSuffix:        did,
 		UpdateCommitment: updateCommitment,
 		UpdateKey:        updatePubKey,
-		Patch:            updatePatch,
+		Patches:          patches,
 		MultihashCode:    sha2_256,
 		Signer:           ecsigner.New(d.updateKey, "ES256", "update-kid"),
 	})
@@ -467,6 +671,21 @@ func (d *DIDSideSteps) getUpdateRequest(did string, updatePatch patch.Patch) ([]
 
 	// update update key for subsequent update requests
 	d.updateKey = updateKey
+
+	return req, nil
+}
+
+func (d *DIDSideSteps) getUpdateRequestModel(did string, patches []patch.Patch) (model.UpdateRequest, error) {
+	reqBytes, err := d.getUpdateRequest(did, patches)
+	if err != nil {
+		return model.UpdateRequest{}, err
+	}
+
+	var req model.UpdateRequest
+	err = json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return model.UpdateRequest{}, err
+	}
 
 	return req, nil
 }
@@ -781,6 +1000,7 @@ func prettyPrint(result *document.ResolutionResult) error {
 func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^check error response contains "([^"]*)"$`, d.checkErrorResp)
 	s.Step(`^client sends request to create DID document$`, d.createDIDDocument)
+	s.Step(`^client sends request to create DID document with "([^"]*)" error$`, d.createDIDDocumentWithError)
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessRespContains)
 	s.Step(`^check success response does NOT contain "([^"]*)"$`, d.checkSuccessRespDoesntContain)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
@@ -789,8 +1009,10 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
 	s.Step(`^client sends request to add service endpoint with ID "([^"]*)" to DID document$`, d.addServiceEndpointToDIDDocument)
 	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
+	s.Step(`^client sends request to update DID document with "([^"]*)" error$`, d.updateDIDDocumentWithError)
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
+	s.Step(`^client sends request to recover DID document with "([^"]*)" error$`, d.recoverDIDDocumentWithError)
 	s.Step(`^client sends request to resolve DID document with initial state "([^"]*)"$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)

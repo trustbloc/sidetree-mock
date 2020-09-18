@@ -28,7 +28,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      Then check success response contains "#didDocumentHash"
+      Then check success response contains "#did"
 
       When client sends operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/deactivate/deactivate.json"
 
@@ -42,7 +42,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      Then check success response contains "#didDocumentHash"
+      Then check success response contains "#did"
 
       When client sends operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/recover/recover.json"
 
@@ -56,7 +56,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      Then check success response contains "#didDocumentHash"
+      Then check success response contains "#did"
 
       When client sends operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/update/update.json"
 
