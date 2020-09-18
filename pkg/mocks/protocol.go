@@ -8,19 +8,108 @@ package mocks
 
 import (
 	"fmt"
+	"sync"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/api/cas"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
+	"github.com/trustbloc/sidetree-core-go/pkg/compression"
+	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
+	"github.com/trustbloc/sidetree-core-go/pkg/processor"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/doccomposer"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/docvalidator/didvalidator"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/operationapplier"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/operationparser"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprocessor"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprovider"
 )
 
-const maxBatchFileSize = 2000000 // in bytes
+// DefaultNS is default namespace used in mocks
+const DefaultNS = "did:sidetree"
+
+// maximum batch files size in bytes
+const maxBatchFileSize = 20000
 
 // MockProtocolClient mocks protocol for testing purposes.
 type MockProtocolClient struct {
-	protocols []protocol.Protocol
+	currentVersion *mocks.ProtocolVersion
+	versions       []*mocks.ProtocolVersion
 }
 
-// NewMockProtocolClient creates mocks protocol client
-func NewMockProtocolClient() *MockProtocolClient {
+// Current mocks getting last protocol version
+func (m *MockProtocolClient) Current() (protocol.Version, error) {
+	return m.currentVersion, nil
+}
+
+// Get mocks getting protocol version based on blockchain(transaction) time
+func (m *MockProtocolClient) Get(transactionTime uint64) (protocol.Version, error) {
+	for i := len(m.versions) - 1; i >= 0; i-- {
+		if transactionTime >= m.versions[i].Protocol().GenesisTime {
+			return m.versions[i], nil
+		}
+	}
+
+	return nil, fmt.Errorf("protocol parameters are not defined for blockchain time: %d", transactionTime)
+}
+
+// NewMockProtocolClientProvider creates new mock protocol client provider
+func NewMockProtocolClientProvider() *MockProtocolClientProvider {
+	opStore := NewMockOperationStore()
+	casClient := NewMockCasClient(nil)
+
+	return &MockProtocolClientProvider{
+		clients:       make(map[string]protocol.Client),
+		opStore:       opStore,
+		opStoreClient: opStore,
+		casClient:     casClient,
+	}
+}
+
+// MockProtocolClientProvider implements mock protocol client provider
+type MockProtocolClientProvider struct {
+	mutex         sync.Mutex
+	clients       map[string]protocol.Client
+	opStoreClient processor.OperationStoreClient
+	opStore       txnprocessor.OperationStore
+	casClient     cas.Client
+}
+
+// WithOpStoreClient sets the operation store client
+func (m *MockProtocolClientProvider) WithOpStoreClient(opStoreClient processor.OperationStoreClient) *MockProtocolClientProvider {
+	m.opStoreClient = opStoreClient
+
+	return m
+}
+
+// WithOpStore sets the operation store
+func (m *MockProtocolClientProvider) WithOpStore(opStore txnprocessor.OperationStore) *MockProtocolClientProvider {
+	m.opStore = opStore
+
+	return m
+}
+
+// WithCasClient sets the CAS client
+func (m *MockProtocolClientProvider) WithCasClient(casClient cas.Client) *MockProtocolClientProvider {
+	m.casClient = casClient
+
+	return m
+}
+
+// ForNamespace will return protocol client for that namespace
+func (m *MockProtocolClientProvider) ForNamespace(namespace string) (protocol.Client, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	pc, ok := m.clients[namespace]
+	if !ok {
+		pc = m.create()
+		m.clients[namespace] = pc
+	}
+
+	return pc, nil
+}
+
+func (m *MockProtocolClientProvider) create() *MockProtocolClient {
+	//nolint:gomnd
 	latest := protocol.Protocol{
 		GenesisTime:                  0,
 		HashAlgorithmInMultiHashCode: 18,
@@ -36,41 +125,33 @@ func NewMockProtocolClient() *MockProtocolClient {
 		KeyAlgorithms:                []string{"Ed25519", "P-256", "secp256k1"},
 	}
 
-	// has to be sorted for mock client to work
-	versions := []protocol.Protocol{latest}
+	parser := operationparser.New(latest)
+	cp := compression.New(compression.WithDefaultAlgorithms())
+	op := txnprovider.NewOperationProvider(latest, parser, m.casClient, cp)
+	th := txnprovider.NewOperationHandler(latest, m.casClient, cp)
+	dc := doccomposer.New()
+	oa := operationapplier.New(latest, parser, dc)
 
-	return &MockProtocolClient{protocols: versions}
-}
+	txnProcessor := txnprocessor.New(
+		&txnprocessor.Providers{
+			OpStore:                   m.opStore,
+			OperationProtocolProvider: op,
+		},
+	)
 
-// Current mocks getting last protocol version
-func (m *MockProtocolClient) Current() (protocol.Protocol, error) {
-	return m.protocols[len(m.protocols)-1], nil
-}
+	pv := &mocks.ProtocolVersion{}
+	pv.OperationApplierReturns(oa)
+	pv.OperationParserReturns(parser)
+	pv.DocumentComposerReturns(dc)
+	pv.DocumentValidatorReturns(didvalidator.New(m.opStoreClient))
+	pv.OperationProviderReturns(op)
+	pv.OperationHandlerReturns(th)
+	pv.TransactionProcessorReturns(txnProcessor)
 
-// Get mocks getting protocol version based on blockchain(transaction) time
-func (m *MockProtocolClient) Get(transactionTime uint64) (protocol.Protocol, error) {
-	for i := len(m.protocols) - 1; i >= 0; i-- {
-		if transactionTime >= m.protocols[i].GenesisTime {
-			return m.protocols[i], nil
-		}
+	pv.ProtocolReturns(latest)
+
+	return &MockProtocolClient{
+		currentVersion: pv,
+		versions:       []*mocks.ProtocolVersion{pv},
 	}
-
-	return protocol.Protocol{}, fmt.Errorf("protocol parameters are not defined for block chain time: %d", transactionTime)
-}
-
-// NewMockProtocolClientProvider creates new mock protocol client provider
-func NewMockProtocolClientProvider() *MockProtocolClientProvider {
-	return &MockProtocolClientProvider{
-		ProtocolClient: NewMockProtocolClient(),
-	}
-}
-
-// MockProtocolClientProvider implements mock protocol client provider
-type MockProtocolClientProvider struct {
-	ProtocolClient protocol.Client
-}
-
-// ForNamespace provides protocol client for namespace
-func (m *MockProtocolClientProvider) ForNamespace(namespace string) (protocol.Client, error) {
-	return m.ProtocolClient, nil
 }
