@@ -19,7 +19,7 @@ import (
 
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
-	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/didvalidator"
+	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/transformer/didtransformer"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 
@@ -45,13 +45,16 @@ func main() {
 
 	opStore := mocks.NewMockOperationStore()
 
-	ctx, err := sidetreecontext.New(opStore)
+	didDocNamespace := defaultDIDDocNamespace
+
+	pcp := mocks.NewMockProtocolClientProvider().WithOpStore(opStore).WithOpStoreClient(opStore)
+	pc, err := pcp.ForNamespace(mocks.DefaultNS)
 	if err != nil {
-		logger.Errorf("Failed to create new context: %s", err.Error())
+		logger.Errorf("Failed to get protocol client for namespace [%s]: %s", mocks.DefaultNS, err.Error())
 		panic(err)
 	}
 
-	didDocNamespace := defaultDIDDocNamespace
+	ctx := sidetreecontext.New(pc)
 
 	if config.GetString("did.namespace") != "" {
 		didDocNamespace = config.GetString("did.namespace")
@@ -73,15 +76,15 @@ func main() {
 	batchWriter.Start()
 
 	// start observer
-	observer.Start(ctx.Blockchain(), ctx.CAS(), mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClientProvider())
+	observer.Start(ctx.Blockchain(), pcp)
 
 	// did document handler with did document validator for didDocNamespace
 	didDocHandler := dochandler.New(
 		didDocNamespace,
-		ctx.Protocol(),
-		didvalidator.New(ctx.OperationStore(), didvalidator.WithMethodContext(methodCtx)),
+		pc,
+		didtransformer.New(didtransformer.WithMethodContext(methodCtx)),
 		batchWriter,
-		processor.New(didDocNamespace, ctx.OperationStore(), mocks.NewMockProtocolClient()),
+		processor.New(didDocNamespace, opStore, pc),
 	)
 
 	restSvc := httpserver.New(
@@ -89,7 +92,7 @@ func main() {
 		config.GetString("tls.certificate"),
 		config.GetString("tls.key"),
 		config.GetString("api.token"),
-		diddochandler.NewUpdateHandler(basePath, didDocHandler),
+		diddochandler.NewUpdateHandler(basePath, didDocHandler, pc),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
 	)
 

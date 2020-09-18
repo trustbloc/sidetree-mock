@@ -19,16 +19,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
-	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
+	coremocks "github.com/trustbloc/sidetree-core-go/pkg/mocks"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+
+	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
 
 const (
@@ -49,16 +52,20 @@ var (
 )
 
 func TestServer_Start(t *testing.T) {
-	didDocHandler := mocks.NewMockDocumentHandler().WithNamespace(didDocNamespace)
-	sampleDocHandler := mocks.NewMockDocumentHandler().WithNamespace(sampleNamespace)
+	didDocHandler := coremocks.NewMockDocumentHandler().WithNamespace(didDocNamespace)
+	sampleDocHandler := coremocks.NewMockDocumentHandler().WithNamespace(sampleNamespace)
+
+	pcp := mocks.NewMockProtocolClientProvider()
+	pc, err := pcp.ForNamespace(coremocks.DefaultNS)
+	require.NoError(t, err)
 
 	s := New(url,
 		"",
 		"",
 		"tk1",
-		diddochandler.NewUpdateHandler(basePath, didDocHandler),
+		diddochandler.NewUpdateHandler(basePath, didDocHandler, pc),
 		diddochandler.NewResolveHandler(basePath, didDocHandler),
-		newSampleUpdateHandler(sampleDocHandler),
+		newSampleUpdateHandler(sampleDocHandler, pc),
 		newSampleResolveHandler(sampleDocHandler),
 	)
 	require.NoError(t, s.Start())
@@ -207,9 +214,9 @@ type sampleUpdateHandler struct {
 	*dochandler.UpdateHandler
 }
 
-func newSampleUpdateHandler(processor dochandler.Processor) *sampleUpdateHandler {
+func newSampleUpdateHandler(processor dochandler.Processor, pc protocol.Client) *sampleUpdateHandler {
 	return &sampleUpdateHandler{
-		UpdateHandler: dochandler.NewUpdateHandler(processor),
+		UpdateHandler: dochandler.NewUpdateHandler(processor, pc),
 	}
 }
 

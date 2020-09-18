@@ -18,7 +18,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
-	"github.com/trustbloc/sidetree-core-go/pkg/txnhandler/models"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprovider/models"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
@@ -29,20 +29,27 @@ func TestStartObserver(t *testing.T) {
 		txNum := make(map[uint64]*struct{}, 0)
 		hits := 0
 
-		opStore := &mockOperationStoreClient{putFunc: func(ops []*batch.AnchoredOperation) error {
-			rw.Lock()
-			defer rw.Unlock()
+		opStore := &mockOperationStoreClient{
+			putFunc: func(ops []*batch.AnchoredOperation) error {
+				rw.Lock()
+				defer rw.Unlock()
 
-			for _, op := range ops {
-				txNum[op.TransactionNumber] = nil
-				hits++
-			}
+				for _, op := range ops {
+					txNum[op.TransactionNumber] = nil
+					hits++
+				}
 
-			return nil
-		}}
+				return nil
+			},
+		}
 
-		Start(&mockBlockchainClient{readValue: []*txn.SidetreeTxn{{AnchorString: "1.anchorAddress", TransactionNumber: 0},
-			{AnchorString: "1.anchorAddress", TransactionNumber: 1}}}, mockCASClient{readFunc: func(key string) ([]byte, error) {
+		bcc := &mockBlockchainClient{
+			readValue: []*txn.SidetreeTxn{
+				{Namespace: mocks.DefaultNS, AnchorString: "1.anchorAddress", TransactionNumber: 0},
+				{Namespace: mocks.DefaultNS, AnchorString: "1.anchorAddress", TransactionNumber: 1}},
+		}
+
+		casClient := mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
 				return compress(&models.AnchorFile{MapFileHash: "mapAddress",
 					Operations: models.Operations{
@@ -57,8 +64,12 @@ func TestStartObserver(t *testing.T) {
 				return compress(&models.ChunkFile{Deltas: []string{getDelta()}})
 			}
 			return nil, nil
-		}}, mocks.NewMockOpStoreProvider(opStore), mocks.NewMockProtocolClientProvider())
+		}}
+
+		Start(bcc, mocks.NewMockProtocolClientProvider().WithOpStore(opStore).WithCasClient(casClient))
+
 		time.Sleep(2000 * time.Millisecond)
+
 		rw.RLock()
 		require.Equal(t, 2, hits)
 		require.Equal(t, 2, len(txNum))
