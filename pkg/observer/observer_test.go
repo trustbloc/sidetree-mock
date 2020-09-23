@@ -87,7 +87,7 @@ type mockBlockchainClient struct {
 }
 
 // Read ledger transaction
-func (m mockBlockchainClient) WriteAnchor(anchor string) error {
+func (m mockBlockchainClient) WriteAnchor(anchor string, protocolGenesisTime uint64) error {
 	return nil
 
 }
