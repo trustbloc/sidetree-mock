@@ -10,7 +10,7 @@ require (
 	github.com/mr-tron/base58 v1.1.3
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.2
-	github.com/trustbloc/sidetree-core-go v0.1.5-0.20200925165431-903c3c478e5e
+	github.com/trustbloc/sidetree-core-go v0.1.5-0.20200930154047-f58e34efa522
 )
 
 go 1.13

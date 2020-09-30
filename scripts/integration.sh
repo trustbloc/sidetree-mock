@@ -14,4 +14,5 @@ TAGS=interop_resolve_with_initial_value,interop_create_doc go test -count=1 -v -
 TAGS=interop_recover_doc go test -count=1 -v -cover . -p 1 -timeout=20m -race
 TAGS=interop_deactivate_doc go test -count=1 -v -cover . -p 1 -timeout=20m -race
 TAGS=interop_update_doc go test -count=1 -v -cover . -p 1 -timeout=20m -race
+TAGS=interop_resolve_long_form_did go test -count=1 -v -cover . -p 1 -timeout=20m -race
 cd $PWD

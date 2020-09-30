@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/canonicalizer"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
@@ -507,13 +508,16 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue(mode string) error {
 		return err
 	}
 
-	initialState := d.createRequest.SuffixData + "." + d.createRequest.Delta
-
 	var req string
 	switch mode {
 	case "parameter":
+		initialState := d.getInitalStateParam()
 		req = testDocumentResolveURL + "/" + did + initialStateParam + initialState
 	case "value":
+		initialState, err := d.getInitialStateJCS()
+		if err != nil {
+			return err
+		}
 		req = testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
 	default:
 		return fmt.Errorf("mode '%s' not supported", mode)
@@ -521,6 +525,46 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue(mode string) error {
 
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
+}
+
+func (d *DIDSideSteps) getInitialStateJCS() (string, error) {
+	suffixDataBytes, err := docutil.DecodeString(d.createRequest.SuffixData)
+	if err != nil {
+		return "", err
+	}
+
+	var suffixData model.SuffixDataModel
+	err = json.Unmarshal(suffixDataBytes, &suffixData)
+	if err != nil {
+		return "", err
+	}
+
+	deltaBytes, err := docutil.DecodeString(d.createRequest.Delta)
+	if err != nil {
+		return "", err
+	}
+
+	var delta model.DeltaModel
+	err = json.Unmarshal(deltaBytes, &delta)
+	if err != nil {
+		return "", err
+	}
+
+	createReq := model.CreateRequestJCS{
+		Delta:      &delta,
+		SuffixData: &suffixData,
+	}
+
+	bytes, err := canonicalizer.MarshalCanonical(createReq)
+	if err != nil {
+		return "", err
+	}
+
+	return docutil.EncodeToString(bytes), nil
+}
+
+func (d *DIDSideSteps) getInitalStateParam() string {
+	return d.createRequest.SuffixData + "." + d.createRequest.Delta
 }
 
 func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]byte, error) {
@@ -801,7 +845,7 @@ func getPubKey(pubKey interface{}) (string, error) {
 func (d *DIDSideSteps) processRequest(path string) error {
 	var err error
 
-	logger.Infof("processing request from '%s'", path)
+	logger.Infof("processing operation request from '%s'", path)
 
 	reqBytes, err := readRequest(path)
 	if err != nil {
@@ -822,11 +866,31 @@ func (d *DIDSideSteps) processRequest(path string) error {
 	return err
 }
 
+func (d *DIDSideSteps) resolveRequest(path string) error {
+	var err error
+
+	logger.Infof("processing resolve request from '%s'", path)
+
+	reqBytes, err := readRequest(path)
+	if err != nil {
+		return err
+	}
+
+	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + string(reqBytes))
+
+	return err
+}
+
 func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	var err error
 
 	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + interopResolveDidWithInitialState)
 	return err
+}
+
+type longFormResolutionResult struct {
+	Status           string                    `json:"status,omitempty"`
+	ResolutionResult document.ResolutionResult `json:"body,omitempty"`
 }
 
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
@@ -840,9 +904,23 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	}
 
 	var expected document.ResolutionResult
-	err = json.Unmarshal(body, &expected)
-	if err != nil {
-		return err
+	if url == "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/longFormDid/resultingDocument.json" {
+
+		// temporary struct until they fix issue #847
+		var temp longFormResolutionResult
+		err = json.Unmarshal(body, &temp)
+		if err != nil {
+			return err
+		}
+
+		expected = temp.ResolutionResult
+
+	} else {
+
+		err = json.Unmarshal(body, &expected)
+		if err != nil {
+			return err
+		}
 	}
 
 	prettyPrint(&expected)
@@ -991,7 +1069,7 @@ func prettyPrint(result *document.ResolutionResult) error {
 		return err
 	}
 
-	logger.Info(string(b))
+	fmt.Println(string(b))
 
 	return nil
 }
@@ -1015,6 +1093,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to recover DID document with "([^"]*)" error$`, d.recoverDIDDocumentWithError)
 	s.Step(`^client sends request to resolve DID document with initial state "([^"]*)"$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
+	s.Step(`^client sends resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)

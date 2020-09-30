@@ -63,3 +63,8 @@ Feature:
       Then we wait 1 seconds
       When client sends request to resolve DID document
       Then success response is validated against resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/update/resultingDocument.json"
+
+    @interop_resolve_long_form_did
+    Scenario: interop test for resolving long form did
+      When client sends resolve request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/longFormDid/longFormDid.txt"
+      Then success response is validated against resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/longFormDid/resultingDocument.json"
