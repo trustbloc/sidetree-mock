@@ -502,32 +502,24 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	return err
 }
 
-func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue(mode string) error {
+func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	did, err := d.getDID()
 	if err != nil {
 		return err
 	}
 
-	var req string
-	switch mode {
-	case "parameter":
-		initialState := d.getInitalStateParam()
-		req = testDocumentResolveURL + "/" + did + initialStateParam + initialState
-	case "value":
-		initialState, err := d.getInitialStateJCS()
-		if err != nil {
-			return err
-		}
-		req = testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
-	default:
-		return fmt.Errorf("mode '%s' not supported", mode)
+	initialState, err := d.getInitialState()
+	if err != nil {
+		return err
 	}
+
+	req := testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
 
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
 }
 
-func (d *DIDSideSteps) getInitialStateJCS() (string, error) {
+func (d *DIDSideSteps) getInitialState() (string, error) {
 	suffixDataBytes, err := docutil.DecodeString(d.createRequest.SuffixData)
 	if err != nil {
 		return "", err
@@ -561,10 +553,6 @@ func (d *DIDSideSteps) getInitialStateJCS() (string, error) {
 	}
 
 	return docutil.EncodeToString(bytes), nil
-}
-
-func (d *DIDSideSteps) getInitalStateParam() string {
-	return d.createRequest.SuffixData + "." + d.createRequest.Delta
 }
 
 func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]byte, error) {
@@ -1091,7 +1079,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to recover DID document with "([^"]*)" error$`, d.recoverDIDDocumentWithError)
-	s.Step(`^client sends request to resolve DID document with initial state "([^"]*)"$`, d.resolveDIDDocumentWithInitialValue)
+	s.Step(`^client sends request to resolve DID document with initial state$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
 	s.Step(`^client sends resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
