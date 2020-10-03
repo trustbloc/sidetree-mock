@@ -39,8 +39,8 @@ import (
 var logger = logrus.New()
 
 const (
-	didDocNamespace       = "did:sidetree"
-	initialStateParam     = "?-sidetree-initial-state="
+	didDocNamespace = "did:sidetree"
+
 	initialStateSeparator = ":"
 
 	testDocumentResolveURL = "https://localhost:48326/sidetree/0.0.1/identifiers"
@@ -124,6 +124,7 @@ type DIDSideSteps struct {
 	updateKey     *ecdsa.PrivateKey
 	resp          *restclient.HttpRespone
 	bddContext    *BDDContext
+	alias         string
 }
 
 // NewDIDSideSteps
@@ -436,12 +437,19 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
 
-	if msg == "#did" || msg == "#emptydoc" {
-		did, err := d.getDID()
+	if msg == "#did" || msg == "#aliasdid" || msg == "#emptydoc" {
+		ns := didDocNamespace
+		if msg == "#aliasdid" {
+			ns = d.alias
+		}
+
+		did, err := d.getDIDWithNamespace(ns)
 		if err != nil {
 			return err
 		}
+
 		msg = strings.Replace(msg, "#did", did, -1)
+		msg = strings.Replace(msg, "#aliasdid", did, -1)
 
 		var result document.ResolutionResult
 		err = json.Unmarshal(d.resp.Payload, &result)
@@ -502,11 +510,44 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	return err
 }
 
+func (d *DIDSideSteps) resolveDIDDocumentWithAlias(alias string) error {
+	did, err := d.getDIDWithNamespace(alias)
+	if err != nil {
+		return err
+	}
+
+	d.alias = alias
+
+	url := testDocumentResolveURL + "/" + did
+
+	d.resp, err = restclient.SendResolveRequest(url)
+	return err
+}
+
 func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 	did, err := d.getDID()
 	if err != nil {
 		return err
 	}
+
+	initialState, err := d.getInitialState()
+	if err != nil {
+		return err
+	}
+
+	req := testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
+
+	d.resp, err = restclient.SendResolveRequest(req)
+	return err
+}
+
+func (d *DIDSideSteps) resolveDIDDocumentWithInitialValueAndAlias(alias string) error {
+	did, err := d.getDIDWithNamespace(alias)
+	if err != nil {
+		return err
+	}
+
+	d.alias = alias
 
 	initialState, err := d.getInitialState()
 	if err != nil {
@@ -649,12 +690,16 @@ func (d *DIDSideSteps) getRecoverRequestModel(doc []byte, patches []patch.Patch,
 }
 
 func (d *DIDSideSteps) getDID() (string, error) {
+	return d.getDIDWithNamespace(didDocNamespace)
+}
+
+func (d *DIDSideSteps) getDIDWithNamespace(namespace string) (string, error) {
 	uniqueSuffix, err := d.getUniqueSuffix()
 	if err != nil {
 		return "", err
 	}
 
-	didID := didDocNamespace + docutil.NamespaceDelimiter + uniqueSuffix
+	didID := namespace + docutil.NamespaceDelimiter + uniqueSuffix
 	return didID, nil
 }
 
@@ -1070,6 +1115,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^check success response contains "([^"]*)"$`, d.checkSuccessRespContains)
 	s.Step(`^check success response does NOT contain "([^"]*)"$`, d.checkSuccessRespDoesntContain)
 	s.Step(`^client sends request to resolve DID document$`, d.resolveDIDDocument)
+	s.Step(`^client sends request to resolve DID document with alias "([^"]*)"$`, d.resolveDIDDocumentWithAlias)
 	s.Step(`^client sends request to update DID document path "([^"]*)" with value "([^"]*)"$`, d.updateDIDDocumentWithJSONPatch)
 	s.Step(`^client sends request to add public key with ID "([^"]*)" to DID document$`, d.addPublicKeyToDIDDocument)
 	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
@@ -1080,6 +1126,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
 	s.Step(`^client sends request to recover DID document with "([^"]*)" error$`, d.recoverDIDDocumentWithError)
 	s.Step(`^client sends request to resolve DID document with initial state$`, d.resolveDIDDocumentWithInitialValue)
+	s.Step(`^client sends request to resolve DID document with initial state and with alias "([^"]*)"$`, d.resolveDIDDocumentWithInitialValueAndAlias)
 	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
 	s.Step(`^client sends resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)

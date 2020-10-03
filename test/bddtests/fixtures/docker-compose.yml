@@ -16,6 +16,7 @@ services:
       - SIDETREE_MOCK_HOST=0.0.0.0
       - SIDETREE_MOCK_PORT=48326
       - SIDETREE_MOCK_DID_NAMESPACE=did:sidetree
+      - SIDETREE_MOCK_DID_ALIASES=did:alias.com,did:domain.com
       - SIDETREE_MOCK_DID_METHOD_CONTEXT=https://trustbloc.github.io/context/did/trustbloc-v1.jsonld
     ports:
       - 48326:48326
