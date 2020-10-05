@@ -8,11 +8,6 @@
 @did-interop
 Feature:
 
-    @interop_resolve_with_initial_value
-    Scenario: resolve document with initial value
-      When client sends interop resolve with initial value request
-      Then check success response contains "EiBFsUlzmZ3zJtSFeQKwJNtngjmB51ehMWWDuptf9b4Bag"
-
     @interop_create_doc
     Scenario: create valid did doc
       When client sends operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/create/create.json"

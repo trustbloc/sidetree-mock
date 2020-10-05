@@ -13,16 +13,14 @@ Feature:
     When client sends request to create DID document
     Then check success response contains "#did"
     # retrieve document with initial value before it becomes available on the ledger
-    When client sends request to resolve DID document with initial state "value"
-    Then check success response contains "#did"
-    When client sends request to resolve DID document with initial state "parameter"
+    When client sends request to resolve DID document with initial state
     Then check success response contains "#did"
     # we wait until observer poll sidetree txn from ledger
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#did"
     # retrieve document with initial value after it becomes available on the ledger
-    When client sends request to resolve DID document with initial state "value"
+    When client sends request to resolve DID document with initial state
     Then check success response contains "#did"
 
     When client sends request to create DID document with "patch" error
