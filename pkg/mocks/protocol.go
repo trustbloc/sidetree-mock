@@ -120,7 +120,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 		MaxChunkFileSize:             maxBatchFileSize,
 		MaxMapFileSize:               maxBatchFileSize,
 		MaxAnchorFileSize:            maxBatchFileSize,
-		EnableReplacePatch:           true,
+		Patches:                      []string{"replace", "add-public-keys", "remove-public-keys", "add-service-endpoints", "remove-service-endpoints", "ietf-json-patch"},
 		SignatureAlgorithms:          []string{"EdDSA", "ES256", "ES256K"},
 		KeyAlgorithms:                []string{"Ed25519", "P-256", "secp256k1"},
 	}
