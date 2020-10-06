@@ -15,13 +15,27 @@ Feature:
     # retrieve document with initial value before it becomes available on the ledger
     When client sends request to resolve DID document with initial state
     Then check success response contains "#did"
+    # retrieve document with initial value and alias before it becomes available on the ledger
+    When client sends request to resolve DID document with initial state and with alias "did:domain.com"
+    Then check success response contains "#aliasdid"
     # we wait until observer poll sidetree txn from ledger
     Then we wait 1 seconds
     When client sends request to resolve DID document
     Then check success response contains "#did"
+    When client sends request to resolve DID document with alias "did:domain.com"
+    Then check success response contains "#did"
+    Then check success response contains "#aliasdid"
+    When client sends request to resolve DID document with alias "did:notconfigured.com"
+    Then check error response contains "did must start with configured namespace[did:sidetree] or aliases[did:alias.com did:domain.com]"
+
     # retrieve document with initial value after it becomes available on the ledger
     When client sends request to resolve DID document with initial state
     Then check success response contains "#did"
+
+    # retrieve document with initial value and alias after it becomes available on the ledger
+    When client sends request to resolve DID document with initial state and with alias "did:domain.com"
+    Then check success response contains "#did"
+    Then check success response contains "#aliasdid"
 
     When client sends request to create DID document with "patch" error
     Then check error response contains "jsonpatch move operation does not apply"
