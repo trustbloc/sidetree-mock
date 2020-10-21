@@ -38,10 +38,11 @@ Feature:
     Then check success response contains "#aliasdid"
 
     When client sends request to create DID document with "patch" error
-    Then check error response contains "jsonpatch move operation does not apply"
+    Then check success response contains "#did"
+    Then check success response contains "#emptydoc"
 
     When client sends request to create DID document with "request" error
-    Then check error response contains "missing patches"
+    Then check error response contains "missing delta"
 
   @create_deactivate_did_doc
   Scenario: deactivate valid did doc
@@ -74,7 +75,7 @@ Feature:
     Then check success response contains "recoveryKey"
 
     When client sends request to recover DID document with "request" error
-    Then check error response contains "missing patches"
+    Then check error response contains "missing delta"
 
     @create_add_remove_public_key
     Scenario: add and remove public keys
@@ -104,7 +105,7 @@ Feature:
       When client sends request to resolve DID document
       Then check success response does NOT contain "newService"
       When client sends request to update DID document with "request" error
-      Then check error response contains "missing patches"
+      Then check error response contains "missing delta"
 
     @update_doc_error
     Scenario: handle update document errors
@@ -117,7 +118,7 @@ Feature:
       Then check success response contains "#did"
       Then check success response contains "createKey"
       When client sends request to update DID document with "request" error
-      Then check error response contains "missing patches"
+      Then check error response contains "missing delta"
 
 
 

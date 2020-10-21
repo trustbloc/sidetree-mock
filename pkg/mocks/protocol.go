@@ -128,7 +128,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	parser := operationparser.New(latest)
 	cp := compression.New(compression.WithDefaultAlgorithms())
 	op := txnprovider.NewOperationProvider(latest, parser, m.casClient, cp)
-	th := txnprovider.NewOperationHandler(latest, m.casClient, cp)
+	th := txnprovider.NewOperationHandler(latest, m.casClient, cp, parser)
 	dc := doccomposer.New()
 	oa := operationapplier.New(latest, parser, dc)
 

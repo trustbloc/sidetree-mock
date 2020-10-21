@@ -24,15 +24,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/canonicalizer"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/ecsigner"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -119,7 +120,7 @@ var emptyJson = []byte("{}")
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	createRequest model.CreateRequest
+	createRequest *model.CreateRequest
 	recoveryKey   *ecdsa.PrivateKey
 	updateKey     *ecdsa.PrivateKey
 	resp          *restclient.HttpRespone
@@ -142,17 +143,22 @@ func (d *DIDSideSteps) createDIDDocument() error {
 		return err
 	}
 
-	req, err := d.getCreateRequest(opaqueDoc, nil)
+	reqBytes, err := d.getCreateRequest(opaqueDoc, nil)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(req, &d.createRequest)
-	if err != nil {
-		return err
+	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, reqBytes)
+	if err == nil {
+		var req model.CreateRequest
+		e := json.Unmarshal(reqBytes, &req)
+		if e != nil {
+			return e
+		}
+
+		d.createRequest = &req
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
 	return err
 }
 
@@ -161,7 +167,7 @@ func (d *DIDSideSteps) createDIDDocumentWithError(errType string) error {
 
 	logger.Infof("create did document with '%s' error", errType)
 
-	var req model.CreateRequest
+	var req *model.CreateRequest
 	switch errType {
 	case "request":
 		// this error will be caught during create request validation
@@ -175,7 +181,7 @@ func (d *DIDSideSteps) createDIDDocumentWithError(errType string) error {
 			return err
 		}
 
-		req.Delta = docutil.EncodeToString(emptyJson)
+		req.Delta = nil
 	case "patch":
 		// for create operation patch errors get caught during request time
 		p, err := patch.NewJSONPatch(errorPatch)
@@ -243,7 +249,7 @@ func (d *DIDSideSteps) updateDIDDocumentWithError(errType string) error {
 			return err
 		}
 
-		req.Delta = docutil.EncodeToString(emptyJson)
+		req.Delta = nil
 	case "resolution":
 		// apply patch error will be caught during resolution (while applying operations)
 
@@ -338,7 +344,7 @@ func (d *DIDSideSteps) recoverDIDDocumentWithError(errType string) error {
 		}
 
 		// delta cannot be empty JSON
-		req.Delta = docutil.EncodeToString(emptyJson)
+		req.Delta = nil
 
 	case "resolution":
 		// apply patch error will be caught during resolution
@@ -561,31 +567,9 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValueAndAlias(alias string) 
 }
 
 func (d *DIDSideSteps) getInitialState() (string, error) {
-	suffixDataBytes, err := docutil.DecodeString(d.createRequest.SuffixData)
-	if err != nil {
-		return "", err
-	}
-
-	var suffixData model.SuffixDataModel
-	err = json.Unmarshal(suffixDataBytes, &suffixData)
-	if err != nil {
-		return "", err
-	}
-
-	deltaBytes, err := docutil.DecodeString(d.createRequest.Delta)
-	if err != nil {
-		return "", err
-	}
-
-	var delta model.DeltaModel
-	err = json.Unmarshal(deltaBytes, &delta)
-	if err != nil {
-		return "", err
-	}
-
-	createReq := model.CreateRequestJCS{
-		Delta:      &delta,
-		SuffixData: &suffixData,
+	createReq := &model.CreateRequest{
+		Delta:      d.createRequest.Delta,
+		SuffixData: d.createRequest.SuffixData,
 	}
 
 	bytes, err := canonicalizer.MarshalCanonical(createReq)
@@ -620,19 +604,19 @@ func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]by
 	})
 }
 
-func (d *DIDSideSteps) getCreateRequestModel(doc []byte, patches []patch.Patch) (model.CreateRequest, error) {
+func (d *DIDSideSteps) getCreateRequestModel(doc []byte, patches []patch.Patch) (*model.CreateRequest, error) {
 	reqBytes, err := d.getCreateRequest(doc, patches)
 	if err != nil {
-		return model.CreateRequest{}, err
+		return &model.CreateRequest{}, err
 	}
 
 	var req model.CreateRequest
 	err = json.Unmarshal(reqBytes, &req)
 	if err != nil {
-		return model.CreateRequest{}, err
+		return &model.CreateRequest{}, err
 	}
 
-	return req, nil
+	return &req, nil
 }
 
 func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniqueSuffix string) ([]byte, error) {
@@ -704,7 +688,7 @@ func (d *DIDSideSteps) getDIDWithNamespace(namespace string) (string, error) {
 }
 
 func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
-	return docutil.CalculateUniqueSuffix(d.createRequest.SuffixData, sha2_256)
+	return docutil.CalculateModelMultihash(d.createRequest.SuffixData, sha2_256)
 }
 
 func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
@@ -891,8 +875,8 @@ func (d *DIDSideSteps) processRequest(path string) error {
 		return err
 	}
 
-	if req.Operation == model.OperationTypeCreate {
-		d.createRequest = req
+	if req.Operation == batch.OperationTypeCreate {
+		d.createRequest = &req
 	}
 
 	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, reqBytes)
@@ -921,11 +905,6 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	return err
 }
 
-type longFormResolutionResult struct {
-	Status           string                    `json:"status,omitempty"`
-	ResolutionResult document.ResolutionResult `json:"body,omitempty"`
-}
-
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	if d.resp.ErrorMsg != "" {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
@@ -937,23 +916,10 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	}
 
 	var expected document.ResolutionResult
-	if url == "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/fixtures/longFormDid/resultingDocument.json" {
 
-		// temporary struct until they fix issue #847
-		var temp longFormResolutionResult
-		err = json.Unmarshal(body, &temp)
-		if err != nil {
-			return err
-		}
-
-		expected = temp.ResolutionResult
-
-	} else {
-
-		err = json.Unmarshal(body, &expected)
-		if err != nil {
-			return err
-		}
+	err = json.Unmarshal(body, &expected)
+	if err != nil {
+		return err
 	}
 
 	prettyPrint(&expected)
