@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package observer
 
 import (
-	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/model"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprovider/models"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
@@ -61,7 +60,7 @@ func TestStartObserver(t *testing.T) {
 				return compress(&models.MapFile{Chunks: []models.Chunk{{ChunkFileURI: "chunkAddress"}}})
 			}
 			if key == "chunkAddress" {
-				return compress(&models.ChunkFile{Deltas: []string{getDelta()}})
+				return compress(&models.ChunkFile{Deltas: []*model.DeltaModel{getDelta()}})
 			}
 			return nil, nil
 		}}
@@ -124,19 +123,12 @@ func (m mockOperationStoreClient) Put(ops []*batch.AnchoredOperation) error {
 	return nil
 }
 
-func getSuffixData() string {
-	model := &model.SuffixDataModel{
+func getSuffixData() *model.SuffixDataModel {
+	return &model.SuffixDataModel{
 		DeltaHash: getEncodedMultihash([]byte(validDoc)),
 
 		RecoveryCommitment: getEncodedMultihash([]byte("commitment")),
 	}
-
-	bytes, err := json.Marshal(model)
-	if err != nil {
-		panic(err)
-	}
-
-	return docutil.EncodeToString(bytes)
 }
 
 func getEncodedMultihash(data []byte) string {
@@ -148,23 +140,16 @@ func getEncodedMultihash(data []byte) string {
 	return docutil.EncodeToString(mh)
 }
 
-func getDelta() string {
+func getDelta() *model.DeltaModel {
 	patches, err := patch.PatchesFromDocument(validDoc)
 	if err != nil {
 		panic(err)
 	}
 
-	model := &model.DeltaModel{
+	return &model.DeltaModel{
 		Patches:          patches,
 		UpdateCommitment: getEncodedMultihash([]byte("")),
 	}
-
-	bytes, err := json.Marshal(model)
-	if err != nil {
-		panic(err)
-	}
-
-	return docutil.EncodeToString(bytes)
 }
 
 func compress(model interface{}) ([]byte, error) {
