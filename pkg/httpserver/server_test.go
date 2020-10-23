@@ -28,7 +28,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/dochandler"
-	"github.com/trustbloc/sidetree-core-go/pkg/restapi/helper"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
@@ -277,13 +277,13 @@ func getCreateRequest() ([]byte, error) {
 		return nil, err
 	}
 
-	info := &helper.CreateRequestInfo{
+	info := &client.CreateRequestInfo{
 		OpaqueDocument:     validDoc,
 		RecoveryCommitment: c,
 		UpdateCommitment:   c,
 		MultihashCode:      sha2_256,
 	}
-	return helper.NewCreateRequest(info)
+	return client.NewCreateRequest(info)
 }
 
 const validDoc = `{
