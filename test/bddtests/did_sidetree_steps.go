@@ -24,15 +24,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/canonicalizer"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
-	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/ecsigner"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
@@ -53,9 +52,9 @@ const (
 const addPublicKeysTemplate = `[
 	{
       "id": "%s",
-      "purpose": ["general"],
+      "purposes": ["verificationMethod"],
       "type": "JsonWebKey2020",
-      "jwk": {
+      "publicKeyJwk": {
         "kty": "EC",
         "crv": "P-256K",
         "x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",
@@ -70,7 +69,7 @@ const addServicesTemplate = `[
     {
       "id": "%s",
       "type": "SecureDataStore",
-      "endpoint": "http://hub.my-personal-server.com"
+      "serviceEndpoint": "http://hub.my-personal-server.com"
     }
   ]`
 
@@ -81,26 +80,26 @@ const docTemplate = `{
    {
      "id": "%s",
      "type": "JsonWebKey2020",
-     "purpose": ["auth", "general"],
-     "jwk": %s
+     "purposes": ["authentication", "verificationMethod"],
+     "publicKeyJwk": %s
    },
    {
      "id": "dual-assertion-gen",
      "type": "Ed25519VerificationKey2018",
-     "purpose": ["assertion", "general"],
-     "jwk": %s
+     "purposes": ["assertionMethod", "verificationMethod"],
+     "publicKeyJwk": %s
    }
   ],
   "service": [
 	{
 	   "id": "oidc",
 	   "type": "OpenIdConnectVersion1.0Service",
-	   "endpoint": "https://openid.example.com/"
+	   "serviceEndpoint": "https://openid.example.com/"
 	}, 
 	{
 	   "id": "didcomm",
 	   "type": "did-communication",
-	   "endpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/",
+	   "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/",
 	   "recipientKeys": ["%s"],
 	   "routingKeys": ["%s"],
 	   "priority": 0
@@ -859,23 +858,48 @@ func getPubKey(pubKey interface{}) (string, error) {
 	return string(opsPubKeyBytes), nil
 }
 
-func (d *DIDSideSteps) processRequest(path string) error {
+func (d *DIDSideSteps) processRequest(opType, path string) error {
 	var err error
 
 	logger.Infof("processing operation request from '%s'", path)
 
-	reqBytes, err := readRequest(path)
+	interopVectorsBytes, err := readRequest(path)
 	if err != nil {
 		return err
 	}
 
-	var req model.CreateRequest
-	err = json.Unmarshal(reqBytes, &req)
+	var interopVectors InteropVectors
+	err = json.Unmarshal(interopVectorsBytes, &interopVectors)
 	if err != nil {
 		return err
 	}
 
-	if req.Operation == batch.OperationTypeCreate {
+	var opRequest map[string]interface{}
+	switch opType {
+	case "create":
+		opRequest = interopVectors.Create.OperationRequest
+	case "recover":
+		opRequest = interopVectors.Recover.OperationRequest
+	case "update":
+		opRequest = interopVectors.Update.OperationRequest
+	case "deactivate":
+		opRequest = interopVectors.Deactivate.OperationRequest
+	default:
+		return fmt.Errorf("operation type `%s` not supported for test vectors", opType)
+	}
+
+	reqBytes, err := canonicalizer.MarshalCanonical(opRequest)
+	if err != nil {
+		return err
+	}
+
+	if opType == "create" {
+		var req model.CreateRequest
+		err = json.Unmarshal(reqBytes, &req)
+		if err != nil {
+			return err
+		}
+
 		d.createRequest = &req
 	}
 
@@ -883,17 +907,50 @@ func (d *DIDSideSteps) processRequest(path string) error {
 	return err
 }
 
-func (d *DIDSideSteps) resolveRequest(path string) error {
+type InteropVectors struct {
+	Create     CreateOperationVectors `json:"create,omitempty"`
+	Update     OperationVectors `json:"update,omitempty"`
+	Recover    OperationVectors `json:"recover,omitempty"`
+	Deactivate OperationVectors `json:"deactivate,omitempty"`
+}
+
+type OperationVectors struct {
+	OperationRequest map[string]interface{} `json:"operationRequest,omitempty"`
+}
+
+type CreateOperationVectors struct {
+	OperationVectors
+	ShortFormDID string `json:"shortFormDid,omitempty"`
+	LongFormDID string `json:"longFormDid,omitempty"`
+}
+
+func (d *DIDSideSteps) resolveRequest(reqType, path string) error {
 	var err error
 
 	logger.Infof("processing resolve request from '%s'", path)
 
-	reqBytes, err := readRequest(path)
+	interopVectorsBytes, err := readRequest(path)
 	if err != nil {
 		return err
 	}
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + string(reqBytes))
+	var interopVectors InteropVectors
+	err = json.Unmarshal(interopVectorsBytes, &interopVectors)
+	if err != nil {
+		return err
+	}
+
+	var req string
+	switch reqType {
+	case "long-form-did":
+		req = interopVectors.Create.LongFormDID
+	case "short-form-did":
+		req = interopVectors.Create.ShortFormDID
+	default:
+		return fmt.Errorf("request type `%s` not supported for test vectors", reqType)
+	}
+
+	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + req)
 
 	return err
 }
@@ -903,6 +960,11 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 
 	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + interopResolveDidWithInitialState)
 	return err
+}
+
+type longFormResolutionResult struct {
+	Status           string                    `json:"status,omitempty"`
+	ResolutionResult document.ResolutionResult `json:"body,omitempty"`
 }
 
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
@@ -916,10 +978,23 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	}
 
 	var expected document.ResolutionResult
+	if url == "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/longFormResponse.json" {
 
-	err = json.Unmarshal(body, &expected)
-	if err != nil {
-		return err
+		// temporary struct until they fix issue #899
+		var temp longFormResolutionResult
+		err = json.Unmarshal(body, &temp)
+		if err != nil {
+			return err
+		}
+
+		expected = temp.ResolutionResult
+
+	} else {
+
+		err = json.Unmarshal(body, &expected)
+		if err != nil {
+			return err
+		}
 	}
 
 	prettyPrint(&expected)
@@ -1093,8 +1168,8 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to recover DID document with "([^"]*)" error$`, d.recoverDIDDocumentWithError)
 	s.Step(`^client sends request to resolve DID document with initial state$`, d.resolveDIDDocumentWithInitialValue)
 	s.Step(`^client sends request to resolve DID document with initial state and with alias "([^"]*)"$`, d.resolveDIDDocumentWithInitialValueAndAlias)
-	s.Step(`^client sends operation request from "([^"]*)"$`, d.processRequest)
-	s.Step(`^client sends resolve request from "([^"]*)"$`, d.resolveRequest)
+	s.Step(`^client sends "([^"]*)" operation request from "([^"]*)"$`, d.processRequest)
+	s.Step(`^client sends "([^"]*)" resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)

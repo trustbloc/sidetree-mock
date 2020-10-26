@@ -98,7 +98,7 @@ func (s *Server) Start() error {
 			err = s.httpServer.ListenAndServe()
 		}
 
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			panic(fmt.Sprintf("Failed to start server on [%s]: %s", s.httpServer.Addr, err))
 		}
 		atomic.StoreUint32(&s.started, 0)
