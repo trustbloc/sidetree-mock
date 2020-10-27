@@ -50,7 +50,7 @@ func TestStartObserver(t *testing.T) {
 
 		casClient := mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
-				return compress(&models.AnchorFile{MapFileHash: "mapAddress",
+				return compress(&models.AnchorFile{MapFileURI: "mapAddress",
 					Operations: models.Operations{
 						Create: []models.CreateOperation{{
 							SuffixData: getSuffixData(),
