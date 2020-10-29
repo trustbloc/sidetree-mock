@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/trustbloc/sidetree-core-go/pkg/api/batch"
+	
+	"github.com/trustbloc/sidetree-core-go/pkg/api/operation"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
 	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
@@ -29,7 +30,7 @@ func TestStartObserver(t *testing.T) {
 		hits := 0
 
 		opStore := &mockOperationStoreClient{
-			putFunc: func(ops []*batch.AnchoredOperation) error {
+			putFunc: func(ops []*operation.AnchoredOperation) error {
 				rw.Lock()
 				defer rw.Unlock()
 
@@ -113,10 +114,10 @@ func (m mockCASClient) Read(key string) ([]byte, error) {
 }
 
 type mockOperationStoreClient struct {
-	putFunc func(ops []*batch.AnchoredOperation) error
+	putFunc func(ops []*operation.AnchoredOperation) error
 }
 
-func (m mockOperationStoreClient) Put(ops []*batch.AnchoredOperation) error {
+func (m mockOperationStoreClient) Put(ops []*operation.AnchoredOperation) error {
 	if m.putFunc != nil {
 		return m.putFunc(ops)
 	}

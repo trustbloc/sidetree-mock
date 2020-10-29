@@ -909,9 +909,9 @@ func (d *DIDSideSteps) processRequest(opType, path string) error {
 
 type InteropVectors struct {
 	Create     CreateOperationVectors `json:"create,omitempty"`
-	Update     OperationVectors `json:"update,omitempty"`
-	Recover    OperationVectors `json:"recover,omitempty"`
-	Deactivate OperationVectors `json:"deactivate,omitempty"`
+	Update     OperationVectors       `json:"update,omitempty"`
+	Recover    OperationVectors       `json:"recover,omitempty"`
+	Deactivate OperationVectors       `json:"deactivate,omitempty"`
 }
 
 type OperationVectors struct {
@@ -921,7 +921,7 @@ type OperationVectors struct {
 type CreateOperationVectors struct {
 	OperationVectors
 	ShortFormDID string `json:"shortFormDid,omitempty"`
-	LongFormDID string `json:"longFormDid,omitempty"`
+	LongFormDID  string `json:"longFormDid,omitempty"`
 }
 
 func (d *DIDSideSteps) resolveRequest(reqType, path string) error {
@@ -962,11 +962,6 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	return err
 }
 
-type longFormResolutionResult struct {
-	Status           string                    `json:"status,omitempty"`
-	ResolutionResult document.ResolutionResult `json:"body,omitempty"`
-}
-
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	if d.resp.ErrorMsg != "" {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
@@ -978,23 +973,10 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	}
 
 	var expected document.ResolutionResult
-	if url == "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/longFormResponse.json" {
 
-		// temporary struct until they fix issue #899
-		var temp longFormResolutionResult
-		err = json.Unmarshal(body, &temp)
-		if err != nil {
-			return err
-		}
-
-		expected = temp.ResolutionResult
-
-	} else {
-
-		err = json.Unmarshal(body, &expected)
-		if err != nil {
-			return err
-		}
+	err = json.Unmarshal(body, &expected)
+	if err != nil {
+		return err
 	}
 
 	prettyPrint(&expected)
