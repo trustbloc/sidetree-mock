@@ -111,18 +111,18 @@ func (m *MockProtocolClientProvider) ForNamespace(namespace string) (protocol.Cl
 func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	//nolint:gomnd
 	latest := protocol.Protocol{
-		GenesisTime:                  0,
-		HashAlgorithmInMultiHashCode: 18,
-		HashAlgorithm:                5, // crypto code for sha256 hash function
-		MaxOperationCount:            1, // one operation per batch - batch gets cut right away
-		MaxOperationSize:             200000,
-		CompressionAlgorithm:         "GZIP",
-		MaxChunkFileSize:             maxBatchFileSize,
-		MaxMapFileSize:               maxBatchFileSize,
-		MaxAnchorFileSize:            maxBatchFileSize,
-		Patches:                      []string{"replace", "add-public-keys", "remove-public-keys", "add-services", "remove-services", "ietf-json-patch"},
-		SignatureAlgorithms:          []string{"EdDSA", "ES256", "ES256K"},
-		KeyAlgorithms:                []string{"Ed25519", "P-256", "secp256k1"},
+		GenesisTime:          0,
+		MultihashAlgorithm:   18,
+		HashAlgorithm:        5, // crypto code for sha256 hash function
+		MaxOperationCount:    1, // one operation per batch - batch gets cut right away
+		MaxOperationSize:     200000,
+		CompressionAlgorithm: "GZIP",
+		MaxChunkFileSize:     maxBatchFileSize,
+		MaxMapFileSize:       maxBatchFileSize,
+		MaxAnchorFileSize:    maxBatchFileSize,
+		Patches:              []string{"replace", "add-public-keys", "remove-public-keys", "add-services", "remove-services", "ietf-json-patch"},
+		SignatureAlgorithms:  []string{"EdDSA", "ES256", "ES256K"},
+		KeyAlgorithms:        []string{"Ed25519", "P-256", "secp256k1"},
 	}
 
 	parser := operationparser.New(latest)
