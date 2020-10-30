@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package bddtests
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -962,6 +963,8 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	return err
 }
 
+
+
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	if d.resp.ErrorMsg != "" {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
@@ -1003,6 +1006,47 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	}
 
 	logger.Infof("successfully validated did document: %s", doc.ID())
+
+	return nil
+}
+
+func (d *DIDSideSteps) matchResolutionResult(url string) error {
+	if d.resp.ErrorMsg != "" {
+		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
+	}
+
+	body, err := readRequest(url)
+	if err != nil {
+		return err
+	}
+
+	var expected map[string]interface{}
+	err = json.Unmarshal(body, &expected)
+	if err != nil {
+		return err
+	}
+
+	var result map[string]interface{}
+	err = json.Unmarshal(d.resp.Payload, &result)
+	if err != nil {
+		return err
+	}
+
+	expectedCanonical, err := canonicalizer.MarshalCanonical(expected)
+	if err != nil {
+		return err
+	}
+
+	resultCanonical, err := canonicalizer.MarshalCanonical(result)
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Equal(expectedCanonical, resultCanonical) {
+		return fmt.Errorf("resolution response[%s] doesn't match test vector[%s]", string(resultCanonical), string(expectedCanonical))
+	}
+
+	logger.Info("successfully matched canonical resulting document against test vector")
 
 	return nil
 }
@@ -1153,6 +1197,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends "([^"]*)" operation request from "([^"]*)"$`, d.processRequest)
 	s.Step(`^client sends "([^"]*)" resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
+	s.Step(`^success response matches resolution result "([^"]*)"$`, d.matchResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
