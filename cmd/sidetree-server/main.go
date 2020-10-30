@@ -70,6 +70,11 @@ func main() {
 		methodCtx = strings.Split(config.GetString("did.method.context"), arrayDelimiter)
 	}
 
+	baseEnabled := false
+	if config.GetString("did.base.enabled") != "" {
+		baseEnabled = config.GetBool("did.base.enabled")
+	}
+
 	// create new batch writer
 	batchWriter, err := batch.New(didDocNamespace, ctx)
 	if err != nil {
@@ -88,7 +93,7 @@ func main() {
 		didDocNamespace,
 		aliases,
 		pc,
-		didtransformer.New(didtransformer.WithMethodContext(methodCtx)),
+		didtransformer.New(didtransformer.WithMethodContext(methodCtx), didtransformer.WithBase(baseEnabled)),
 		batchWriter,
 		processor.New(didDocNamespace, opStore, pc),
 	)
