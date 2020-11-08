@@ -24,8 +24,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      # Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterUpdate.json"
-      Then success response is validated against resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterUpdate.json"
+      Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterUpdate.json"
 
     @interop_create_recover_deactivate_doc
     Scenario: interop test for recover/deactivate operations
@@ -39,8 +38,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      # Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterRecover.json"
-      Then success response is validated against resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterRecover.json"
+      Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterRecover.json"
 
       When client sends "deactivate" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
