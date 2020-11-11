@@ -9,7 +9,6 @@ package httpserver
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -272,7 +271,7 @@ func getCreateRequest() ([]byte, error) {
 		X:   "x",
 	}
 
-	c, err := commitment.Calculate(testKey, sha2_256, crypto.SHA256)
+	c, err := commitment.Calculate(testKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +288,9 @@ func getCreateRequest() ([]byte, error) {
 const validDoc = `{
 	"publicKey": [{
 		"id": "key-1",
-		"purpose": ["general"],
+		"purposes": ["authentication"],
 		"type": "JsonWebKey2020",
-		"jwk": {
+		"publicKeyJwk": {
 			"kty": "EC",
 			"crv": "P-256K",
 			"x": "PUymIqdtF_qxaAqPABSw-C-owT1KYYQbsMKFM-L9fJA",

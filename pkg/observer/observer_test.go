@@ -14,14 +14,19 @@ import (
 
 	"github.com/trustbloc/sidetree-core-go/pkg/api/operation"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
+	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/compression"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
+	"github.com/trustbloc/sidetree-core-go/pkg/hashing"
+	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprovider/models"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
+
+const sha2_256 = 18
 
 func TestStartObserver(t *testing.T) {
 	t.Run("test success", func(t *testing.T) {
@@ -125,20 +130,20 @@ func (m mockOperationStoreClient) Put(ops []*operation.AnchoredOperation) error 
 }
 
 func getSuffixData() *model.SuffixDataModel {
-	return &model.SuffixDataModel{
-		DeltaHash: getEncodedMultihash([]byte(validDoc)),
-
-		RecoveryCommitment: getEncodedMultihash([]byte("commitment")),
-	}
-}
-
-func getEncodedMultihash(data []byte) string {
-	const sha2_256 = 18
-	mh, err := docutil.ComputeMultihash(sha2_256, data)
+	deltaHash, err := hashing.CalculateModelMultihash(getDelta(), sha2_256)
 	if err != nil {
 		panic(err)
 	}
-	return docutil.EncodeToString(mh)
+
+	recoveryCommitment, err := commitment.Calculate(&jws.JWK{}, sha2_256)
+	if err != nil {
+		panic(err)
+	}
+
+	return &model.SuffixDataModel{
+		DeltaHash:          deltaHash,
+		RecoveryCommitment: recoveryCommitment,
+	}
 }
 
 func getDelta() *model.DeltaModel {
@@ -147,9 +152,14 @@ func getDelta() *model.DeltaModel {
 		panic(err)
 	}
 
+	updateCommitment, err := commitment.Calculate(&jws.JWK{}, sha2_256)
+	if err != nil {
+		panic(err)
+	}
+
 	return &model.DeltaModel{
 		Patches:          patches,
-		UpdateCommitment: getEncodedMultihash([]byte("")),
+		UpdateCommitment: updateCommitment,
 	}
 }
 
