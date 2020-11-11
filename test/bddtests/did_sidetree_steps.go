@@ -8,7 +8,6 @@ package bddtests
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -29,6 +28,8 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
 	"github.com/trustbloc/sidetree-core-go/pkg/docutil"
+	"github.com/trustbloc/sidetree-core-go/pkg/encoder"
+	"github.com/trustbloc/sidetree-core-go/pkg/hashing"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/ecsigner"
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
@@ -577,7 +578,7 @@ func (d *DIDSideSteps) getInitialState() (string, error) {
 		return "", err
 	}
 
-	return docutil.EncodeToString(bytes), nil
+	return encoder.EncodeToString(bytes), nil
 }
 
 func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]byte, error) {
@@ -688,7 +689,7 @@ func (d *DIDSideSteps) getDIDWithNamespace(namespace string) (string, error) {
 }
 
 func (d *DIDSideSteps) getUniqueSuffix() (string, error) {
-	return docutil.CalculateModelMultihash(d.createRequest.SuffixData, sha2_256)
+	return hashing.CalculateModelMultihash(d.createRequest.SuffixData, sha2_256)
 }
 
 func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
@@ -762,7 +763,7 @@ func generateKeyAndCommitment() (*ecdsa.PrivateKey, string, error) {
 		return nil, "", err
 	}
 
-	c, err := commitment.Calculate(pubKey, sha2_256, crypto.SHA256)
+	c, err := commitment.Calculate(pubKey, sha2_256)
 	if err != nil {
 		return nil, "", err
 	}
@@ -962,8 +963,6 @@ func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + interopResolveDidWithInitialState)
 	return err
 }
-
-
 
 func (d *DIDSideSteps) validateResolutionResult(url string) error {
 	if d.resp.ErrorMsg != "" {
