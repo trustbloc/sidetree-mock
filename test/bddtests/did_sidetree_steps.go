@@ -86,7 +86,7 @@ const docTemplate = `{
      "publicKeyJwk": %s
    },
    {
-     "id": "dual-assertion-gen",
+     "id": "auth",
      "type": "Ed25519VerificationKey2018",
      "purposes": ["assertionMethod"],
      "publicKeyJwk": %s
