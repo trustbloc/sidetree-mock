@@ -56,14 +56,14 @@ func TestStartObserver(t *testing.T) {
 
 		casClient := mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
-				return compress(&models.AnchorFile{MapFileURI: "mapAddress",
-					Operations: models.Operations{
+				return compress(&models.CoreIndexFile{ProvisionalIndexFileURI: "provisionalIndexAddress",
+					Operations: models.CoreOperations{
 						Create: []models.CreateOperation{{
 							SuffixData: getSuffixData(),
 						}}}})
 			}
-			if key == "mapAddress" {
-				return compress(&models.MapFile{Chunks: []models.Chunk{{ChunkFileURI: "chunkAddress"}}})
+			if key == "provisionalIndexAddress" {
+				return compress(&models.ProvisionalIndexFile{Chunks: []models.Chunk{{ChunkFileURI: "chunkAddress"}}})
 			}
 			if key == "chunkAddress" {
 				return compress(&models.ChunkFile{Deltas: []*model.DeltaModel{getDelta()}})
@@ -152,14 +152,14 @@ func getDelta() *model.DeltaModel {
 		panic(err)
 	}
 
-	updateCommitment, err := commitment.Calculate(&jws.JWK{}, sha2_256)
+	c, err := commitment.Calculate(&jws.JWK{}, sha2_256)
 	if err != nil {
 		panic(err)
 	}
 
 	return &model.DeltaModel{
 		Patches:          patches,
-		UpdateCommitment: updateCommitment,
+		UpdateCommitment: c,
 	}
 }
 
