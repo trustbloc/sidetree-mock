@@ -1125,15 +1125,15 @@ func validateService(expected, service document.Service) error {
 }
 
 func validateMetadata(expected, metadata document.MethodMetadata) error {
-	if expected.RecoveryCommitment != metadata.RecoveryCommitment {
-		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected.RecoveryCommitment, metadata.RecoveryCommitment)
+	if expected[document.RecoveryCommitmentProperty] != metadata[document.RecoveryCommitmentProperty]  {
+		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected[document.RecoveryCommitmentProperty] , metadata[document.RecoveryCommitmentProperty])
 	}
 
-	if expected.UpdateCommitment != metadata.UpdateCommitment {
-		return fmt.Errorf("update commitment mismatch: expected[%s], got[%s]", expected.UpdateCommitment, metadata.UpdateCommitment)
+	if expected[document.UpdateCommitmentProperty] != metadata[document.UpdateCommitmentProperty] {
+		return fmt.Errorf("update commitment mismatch: expected[%s], got[%s]", expected[document.UpdateCommitmentProperty], metadata[document.UpdateCommitmentProperty])
 	}
 
-	// TODO: published is still not implemented by reference application
+	// Validate is used for validating return value of create request so published will not match against interop resolution result
 
 	return nil
 }

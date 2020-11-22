@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"os"
 	"os/signal"
 	"strings"
@@ -19,10 +20,8 @@ import (
 
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
-	"github.com/trustbloc/sidetree-core-go/pkg/dochandler/transformer/didtransformer"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
-
 	sidetreecontext "github.com/trustbloc/sidetree-mock/pkg/context"
 	"github.com/trustbloc/sidetree-mock/pkg/httpserver"
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
@@ -47,15 +46,6 @@ func main() {
 
 	didDocNamespace := defaultDIDDocNamespace
 
-	pcp := mocks.NewMockProtocolClientProvider().WithOpStore(opStore).WithOpStoreClient(opStore)
-	pc, err := pcp.ForNamespace(mocks.DefaultNS)
-	if err != nil {
-		logger.Errorf("Failed to get protocol client for namespace [%s]: %s", mocks.DefaultNS, err.Error())
-		panic(err)
-	}
-
-	ctx := sidetreecontext.New(pc)
-
 	if config.GetString("did.namespace") != "" {
 		didDocNamespace = config.GetString("did.namespace")
 	}
@@ -75,6 +65,15 @@ func main() {
 		baseEnabled = config.GetBool("did.base.enabled")
 	}
 
+	pcp := mocks.NewMockProtocolClientProvider().WithOpStore(opStore).WithOpStoreClient(opStore).WithMethodContext(methodCtx).WithBase(baseEnabled)
+	pc, err := pcp.ForNamespace(mocks.DefaultNS)
+	if err != nil {
+		logger.Errorf("Failed to get protocol client for namespace [%s]: %s", mocks.DefaultNS, err.Error())
+		panic(err)
+	}
+
+	ctx := sidetreecontext.New(pc)
+
 	// create new batch writer
 	batchWriter, err := batch.New(didDocNamespace, ctx)
 	if err != nil {
@@ -93,7 +92,6 @@ func main() {
 		didDocNamespace,
 		aliases,
 		pc,
-		didtransformer.New(didtransformer.WithMethodContext(methodCtx), didtransformer.WithBase(baseEnabled)),
 		batchWriter,
 		processor.New(didDocNamespace, opStore, pc),
 	)
