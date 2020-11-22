@@ -16,6 +16,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/mocks"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/doccomposer"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/doctransformer/didtransformer"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/docvalidator/didvalidator"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/operationapplier"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/operationparser"
@@ -71,6 +72,8 @@ type MockProtocolClientProvider struct {
 	opStoreClient processor.OperationStoreClient
 	opStore       txnprocessor.OperationStore
 	casClient     cas.Client
+	methodCtx     []string
+	baseEnabled   bool
 }
 
 // WithOpStoreClient sets the operation store client
@@ -90,6 +93,20 @@ func (m *MockProtocolClientProvider) WithOpStore(opStore txnprocessor.OperationS
 // WithCasClient sets the CAS client
 func (m *MockProtocolClientProvider) WithCasClient(casClient cas.Client) *MockProtocolClientProvider {
 	m.casClient = casClient
+
+	return m
+}
+
+// WithMethodContext sets method context for document transformer
+func (m *MockProtocolClientProvider) WithMethodContext(ctx []string) *MockProtocolClientProvider {
+	m.methodCtx = ctx
+
+	return m
+}
+
+//WithBase enables @base property during document transformation
+func (m *MockProtocolClientProvider) WithBase(enabled bool) *MockProtocolClientProvider {
+	m.baseEnabled = enabled
 
 	return m
 }
@@ -132,6 +149,9 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	dc := doccomposer.New()
 	oa := operationapplier.New(latest, parser, dc)
 
+	dv := didvalidator.New(m.opStoreClient)
+	dt := didtransformer.New(didtransformer.WithMethodContext(m.methodCtx), didtransformer.WithBase(m.baseEnabled))
+
 	txnProcessor := txnprocessor.New(
 		&txnprocessor.Providers{
 			OpStore:                   m.opStore,
@@ -143,7 +163,8 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	pv.OperationApplierReturns(oa)
 	pv.OperationParserReturns(parser)
 	pv.DocumentComposerReturns(dc)
-	pv.DocumentValidatorReturns(didvalidator.New(m.opStoreClient))
+	pv.DocumentValidatorReturns(dv)
+	pv.DocumentTransformerReturns(dt)
 	pv.OperationProviderReturns(op)
 	pv.OperationHandlerReturns(th)
 	pv.TransactionProcessorReturns(txnProcessor)
