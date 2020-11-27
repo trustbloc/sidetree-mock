@@ -131,7 +131,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 		GenesisTime:                 0,
 		MultihashAlgorithm:          18,
 		MaxOperationCount:           1, // one operation per batch - batch gets cut right away
-		MaxOperationSize:            200000,
+		MaxOperationSize:            2000,
 		CompressionAlgorithm:        "GZIP",
 		MaxChunkFileSize:            maxBatchFileSize,
 		MaxProvisionalIndexFileSize: maxBatchFileSize,

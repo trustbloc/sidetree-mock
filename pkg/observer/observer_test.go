@@ -57,8 +57,8 @@ func TestStartObserver(t *testing.T) {
 		casClient := mockCASClient{readFunc: func(key string) ([]byte, error) {
 			if key == "anchorAddress" {
 				return compress(&models.CoreIndexFile{ProvisionalIndexFileURI: "provisionalIndexAddress",
-					Operations: models.CoreOperations{
-						Create: []models.CreateOperation{{
+					Operations: &models.CoreOperations{
+						Create: []models.CreateReference{{
 							SuffixData: getSuffixData(),
 						}}}})
 			}

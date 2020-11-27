@@ -724,7 +724,7 @@ func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]by
 		UpdateKey:        updatePubKey,
 		Patches:          patches,
 		MultihashCode:    sha2_256,
-		Signer:           ecsigner.New(d.updateKey, "ES256", "update-kid"),
+		Signer:           ecsigner.New(d.updateKey, "ES256", ""),
 	})
 
 	if err != nil {
