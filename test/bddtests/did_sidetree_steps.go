@@ -105,7 +105,16 @@ const docTemplate = `{
 	   "recipientKeys": ["%s"],
 	   "routingKeys": ["%s"],
 	   "priority": 0
-	}
+	},
+    {
+      "id": "hub-object",
+      "type": "IdentityHub",
+      "serviceEndpoint": {
+        "@context": "https://schema.identity.foundation/hub",
+        "type": "UserHubEndpoint",
+        "instances": ["did:example:456", "did:example:789"]
+      }
+    }
   ]
 }`
 
