@@ -1133,7 +1133,7 @@ func validateService(expected, service document.Service) error {
 	return nil
 }
 
-func validateMetadata(expected, metadata document.MethodMetadata) error {
+func validateMetadata(expected, metadata document.Metadata) error {
 	if expected[document.RecoveryCommitmentProperty] != metadata[document.RecoveryCommitmentProperty]  {
 		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected[document.RecoveryCommitmentProperty] , metadata[document.RecoveryCommitmentProperty])
 	}
