@@ -38,8 +38,7 @@ Feature:
     Then check success response contains "#aliasdid"
 
     When client sends request to create DID document with "patch" error
-    Then check success response contains "#did"
-    Then check success response contains "#emptydoc"
+    Then check error response contains "applying delta resulted in an empty document (most likely due to an invalid patch)"
 
     When client sends request to create DID document with "request" error
     Then check error response contains "missing delta"

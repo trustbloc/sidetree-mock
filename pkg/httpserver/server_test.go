@@ -278,12 +278,12 @@ func getCreateRequest() ([]byte, error) {
 		Y:   "y",
 	}
 
-	updateCommitment, err := commitment.Calculate(updateKey, sha2_256)
+	updateCommitment, err := commitment.GetCommitment(updateKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
 
-	recoveryCommitment, err := commitment.Calculate(recoveryKey, sha2_256)
+	recoveryCommitment, err := commitment.GetCommitment(recoveryKey, sha2_256)
 	if err != nil {
 		return nil, err
 	}
