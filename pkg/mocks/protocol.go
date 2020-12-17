@@ -129,12 +129,11 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	//nolint:gomnd
 	latest := protocol.Protocol{
 		GenesisTime:                 0,
-		MultihashAlgorithm:          18,
+		MultihashAlgorithms:         []uint{18},
 		MaxOperationCount:           1,    // one operation per batch - batch gets cut right away
 		MaxOperationSize:            2500, // has to be bigger than max delta + max proof + small number for type
 		MaxOperationHashLength:      100,
 		MaxDeltaSize:                1700, // interop tests pass for 1000, our test is about 1100 since we have multiple public keys/services
-		MaxProofSize:                700,  // currently it is bellow 500
 		MaxCasURILength:             100,
 		CompressionAlgorithm:        "GZIP",
 		MaxChunkFileSize:            maxBatchFileSize,

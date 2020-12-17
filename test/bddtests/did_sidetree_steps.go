@@ -646,8 +646,14 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniq
 		return nil, err
 	}
 
+	revealValue, err := commitment.GetRevealValue(recoveryPubKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
 	recoverRequest, err := client.NewRecoverRequest(&client.RecoverRequestInfo{
 		DidSuffix:          uniqueSuffix,
+		RevealValue:        revealValue,
 		OpaqueDocument:     string(doc),
 		Patches:            patches,
 		RecoveryKey:        recoveryPubKey,
@@ -708,8 +714,14 @@ func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 		return nil, err
 	}
 
+	revealValue, err := commitment.GetRevealValue(recoveryPubKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
 	return client.NewDeactivateRequest(&client.DeactivateRequestInfo{
 		DidSuffix:   did,
+		RevealValue: revealValue,
 		RecoveryKey: recoveryPubKey,
 		Signer:      ecsigner.New(d.recoveryKey, "ES256", ""),
 	})
@@ -727,8 +739,14 @@ func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]by
 		return nil, err
 	}
 
+	revealValue, err := commitment.GetRevealValue(updatePubKey, sha2_256)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := client.NewUpdateRequest(&client.UpdateRequestInfo{
 		DidSuffix:        did,
+		RevealValue:      revealValue,
 		UpdateCommitment: updateCommitment,
 		UpdateKey:        updatePubKey,
 		Patches:          patches,
@@ -772,7 +790,7 @@ func generateKeyAndCommitment() (*ecdsa.PrivateKey, string, error) {
 		return nil, "", err
 	}
 
-	c, err := commitment.Calculate(pubKey, sha2_256)
+	c, err := commitment.GetCommitment(pubKey, sha2_256)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1134,8 +1152,8 @@ func validateService(expected, service document.Service) error {
 }
 
 func validateMetadata(expected, metadata document.Metadata) error {
-	if expected[document.RecoveryCommitmentProperty] != metadata[document.RecoveryCommitmentProperty]  {
-		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected[document.RecoveryCommitmentProperty] , metadata[document.RecoveryCommitmentProperty])
+	if expected[document.RecoveryCommitmentProperty] != metadata[document.RecoveryCommitmentProperty] {
+		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected[document.RecoveryCommitmentProperty], metadata[document.RecoveryCommitmentProperty])
 	}
 
 	if expected[document.UpdateCommitmentProperty] != metadata[document.UpdateCommitmentProperty] {

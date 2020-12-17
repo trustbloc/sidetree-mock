@@ -135,7 +135,7 @@ func getSuffixData() *model.SuffixDataModel {
 		panic(err)
 	}
 
-	recoveryCommitment, err := commitment.Calculate(&jws.JWK{}, sha2_256)
+	recoveryCommitment, err := commitment.GetCommitment(&jws.JWK{}, sha2_256)
 	if err != nil {
 		panic(err)
 	}
@@ -152,7 +152,7 @@ func getDelta() *model.DeltaModel {
 		panic(err)
 	}
 
-	c, err := commitment.Calculate(&jws.JWK{}, sha2_256)
+	c, err := commitment.GetCommitment(&jws.JWK{}, sha2_256)
 	if err != nil {
 		panic(err)
 	}
