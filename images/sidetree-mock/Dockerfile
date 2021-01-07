@@ -26,5 +26,7 @@ RUN GO_TAGS=${GO_TAGS} GOPROXY=${GOPROXY} make sidetree-mock
 
 
 FROM alpine:${ALPINE_VER} as base
+LABEL org.opencontainers.image.source https://github.com/trustbloc/sidetree-mock
+
 COPY --from=sidetree-mock /go/src/github.com/trustbloc/sidetree-mock/.build/bin/sidetree-mock /usr/local/bin
 CMD ["sidetree-mock"]
