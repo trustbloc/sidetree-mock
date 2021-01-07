@@ -22,7 +22,7 @@ ARCH               = $(shell go env GOARCH)
 GO_VER             = 1.13.4
 
 # Namespace for the sidetree mock node
-DOCKER_OUTPUT_NS          ?= trustbloc
+DOCKER_OUTPUT_NS          ?= ghcr.io/trustbloc
 SIDETREE_MOCK_IMAGE_NAME  ?= sidetree-mock
 
 
