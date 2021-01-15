@@ -44,5 +44,7 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      Then check error response contains "document is no longer available"
+      Then check error response contains "deactivated"
+
+      #Then error response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterDeactivate.json"
 

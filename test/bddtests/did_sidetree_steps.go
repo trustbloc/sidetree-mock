@@ -1018,7 +1018,7 @@ func (d *DIDSideSteps) validateResolutionResult(url string) error {
 
 	prettyPrint(&result)
 
-	err = validateMetadata(expected.MethodMetadata, result.MethodMetadata)
+	err = validateMetadata(expected.DocumentMetadata, result.DocumentMetadata)
 	if err != nil {
 		return err
 	}
@@ -1041,6 +1041,14 @@ func (d *DIDSideSteps) matchResolutionResult(url string) error {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
 
+	return d.matchResolutionResultWithPayload(url, d.resp.Payload)
+}
+
+func (d *DIDSideSteps) matchErrorResolutionResult(url string) error {
+	return d.matchResolutionResultWithPayload(url, []byte(d.resp.ErrorMsg))
+}
+
+func (d *DIDSideSteps) matchResolutionResultWithPayload(url string, payload []byte) error {
 	body, err := readRequest(url)
 	if err != nil {
 		return err
@@ -1053,7 +1061,7 @@ func (d *DIDSideSteps) matchResolutionResult(url string) error {
 	}
 
 	var result map[string]interface{}
-	err = json.Unmarshal(d.resp.Payload, &result)
+	err = json.Unmarshal(payload, &result)
 	if err != nil {
 		return err
 	}
@@ -1152,17 +1160,41 @@ func validateService(expected, service document.Service) error {
 }
 
 func validateMetadata(expected, metadata document.Metadata) error {
-	if expected[document.RecoveryCommitmentProperty] != metadata[document.RecoveryCommitmentProperty] {
+	methodMetadata, err := getMethodMetadata(metadata)
+	if err != nil {
+		return fmt.Errorf("result metadata: %s", err.Error())
+	}
+
+	expectedMethodMetadata, err := getMethodMetadata(expected)
+	if err != nil {
+		return fmt.Errorf("expected metadata: %s", err.Error())
+	}
+
+	if expectedMethodMetadata[document.RecoveryCommitmentProperty] != methodMetadata[document.RecoveryCommitmentProperty] {
 		return fmt.Errorf("recovery commitment mismatch: expected[%s], got[%s]", expected[document.RecoveryCommitmentProperty], metadata[document.RecoveryCommitmentProperty])
 	}
 
-	if expected[document.UpdateCommitmentProperty] != metadata[document.UpdateCommitmentProperty] {
+	if expectedMethodMetadata[document.UpdateCommitmentProperty] != methodMetadata[document.UpdateCommitmentProperty] {
 		return fmt.Errorf("update commitment mismatch: expected[%s], got[%s]", expected[document.UpdateCommitmentProperty], metadata[document.UpdateCommitmentProperty])
 	}
 
 	// Validate is used for validating return value of create request so published will not match against interop resolution result
 
 	return nil
+}
+
+func getMethodMetadata(docMetadata document.Metadata) (document.Metadata, error) {
+	methodMetadataEntry, ok := docMetadata[document.MethodProperty]
+	if !ok {
+		return nil, errors.New("missing method metadata")
+	}
+
+	methodMetadata, ok := methodMetadataEntry.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("wrong type for method metadata")
+	}
+
+	return methodMetadata, nil
 }
 
 func readRequest(url string) ([]byte, error) {
@@ -1224,6 +1256,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends "([^"]*)" resolve request from "([^"]*)"$`, d.resolveRequest)
 	s.Step(`^success response is validated against resolution result "([^"]*)"$`, d.validateResolutionResult)
 	s.Step(`^success response matches resolution result "([^"]*)"$`, d.matchResolutionResult)
+	s.Step(`^error response matches resolution result "([^"]*)"$`, d.matchErrorResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
