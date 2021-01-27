@@ -43,8 +43,14 @@ func New(url, certFile, keyFile, token string, handlers ...common.HTTPHandler) *
 		router.HandleFunc(handler.Path(), handler.Handler()).Methods(handler.Method())
 	}
 
-	// TODO configure cors
-	handler := cors.Default().Handler(router)
+	handler := cors.New(
+		cors.Options{
+			AllowedMethods: []string{
+				http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions,
+			},
+			AllowedHeaders: []string{"*"},
+		},
+	).Handler(router)
 
 	return &Server{
 		httpServer: &http.Server{
