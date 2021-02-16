@@ -44,7 +44,8 @@ Feature:
 
       Then we wait 1 seconds
       When client sends request to resolve DID document
-      Then check error response contains "deactivated"
+      Then check success response contains "deactivated"
 
-      #Then error response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterDeactivate.json"
+      # TODO: Remove comment bellow when reference app adds "deactivate" flag to response
+      # Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterDeactivate.json"
 
