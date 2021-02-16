@@ -92,7 +92,7 @@ type mockBlockchainClient struct {
 }
 
 // Read ledger transaction
-func (m mockBlockchainClient) WriteAnchor(anchor string, protocolGenesisTime uint64) error {
+func (m mockBlockchainClient) WriteAnchor(anchor string, _ []*operation.Reference, _ uint64) error {
 	return nil
 
 }
