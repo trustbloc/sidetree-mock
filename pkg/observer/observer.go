@@ -18,7 +18,7 @@ import (
 var logger = logrus.New()
 
 type ledger struct {
-	blockChainClient batch.BlockchainClient
+	anchorWriter batch.AnchorWriter
 }
 
 func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
@@ -32,7 +32,7 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
 			sidetreeTxns := make([]txn.SidetreeTxn, 0)
 			for moreTransactions {
 				var sidetreeTxn *txn.SidetreeTxn
-				moreTransactions, sidetreeTxn = l.blockChainClient.Read(sinceTransactionNumber)
+				moreTransactions, sidetreeTxn = l.anchorWriter.Read(sinceTransactionNumber)
 				if sidetreeTxn != nil {
 					sinceTransactionNumber = int(sidetreeTxn.TransactionNumber)
 					logger.Debugf("found sidetree txn %d in ledger", sidetreeTxn.TransactionNumber)
@@ -48,9 +48,9 @@ func (l *ledger) RegisterForSidetreeTxn() <-chan []txn.SidetreeTxn {
 }
 
 // Start starts observer routines
-func Start(blockchainClient batch.BlockchainClient, pcp protocol.ClientProvider) {
+func Start(anchorWriter batch.AnchorWriter, pcp protocol.ClientProvider) {
 	providers := &sidetreeobserver.Providers{
-		Ledger:                 &ledger{blockChainClient: blockchainClient},
+		Ledger:                 &ledger{anchorWriter: anchorWriter},
 		ProtocolClientProvider: pcp,
 	}
 

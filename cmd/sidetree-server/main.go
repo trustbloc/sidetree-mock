@@ -85,7 +85,7 @@ func main() {
 	batchWriter.Start()
 
 	// start observer
-	observer.Start(ctx.Blockchain(), pcp)
+	observer.Start(ctx.Anchor(), pcp)
 
 	// did document handler with did document validator for didDocNamespace
 	didDocHandler := dochandler.New(
