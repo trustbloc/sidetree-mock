@@ -48,7 +48,7 @@ func TestStartObserver(t *testing.T) {
 			},
 		}
 
-		bcc := &mockBlockchainClient{
+		bcc := &mockAnchorWriter{
 			readValue: []*txn.SidetreeTxn{
 				{Namespace: mocks.DefaultNS, AnchorString: "1.anchorAddress", TransactionNumber: 0},
 				{Namespace: mocks.DefaultNS, AnchorString: "1.anchorAddress", TransactionNumber: 1}},
@@ -87,16 +87,16 @@ func TestStartObserver(t *testing.T) {
 	})
 }
 
-type mockBlockchainClient struct {
+type mockAnchorWriter struct {
 	readValue []*txn.SidetreeTxn
 }
 
-// Read ledger transaction
-func (m mockBlockchainClient) WriteAnchor(anchor string, _ []*operation.Reference, _ uint64) error {
+func (m mockAnchorWriter) WriteAnchor(anchor string, _ []*operation.Reference, _ uint64) error {
 	return nil
 
 }
-func (m mockBlockchainClient) Read(sinceTransactionNumber int) (bool, *txn.SidetreeTxn) {
+
+func (m mockAnchorWriter) Read(sinceTransactionNumber int) (bool, *txn.SidetreeTxn) {
 	if sinceTransactionNumber+1 >= len(m.readValue) {
 		return false, nil
 	}

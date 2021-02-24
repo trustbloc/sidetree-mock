@@ -17,17 +17,17 @@ import (
 // New returns a new server context
 func New(pc protocol.Client) *ServerContext {
 	return &ServerContext{
-		ProtocolClient:   pc,
-		BlockchainClient: mocks.NewMockBlockchainClient(nil),
-		OpQueue:          &opqueue.MemQueue{},
+		ProtocolClient: pc,
+		AnchorWriter:   mocks.NewMockAnchorWriter(nil),
+		OpQueue:        &opqueue.MemQueue{},
 	}
 }
 
 // ServerContext implements batch context
 type ServerContext struct {
-	ProtocolClient   protocol.Client
-	BlockchainClient *mocks.MockBlockchainClient
-	OpQueue          *opqueue.MemQueue
+	ProtocolClient protocol.Client
+	AnchorWriter   *mocks.MockAnchorWriter
+	OpQueue        *opqueue.MemQueue
 }
 
 // Protocol returns the ProtocolClient
@@ -35,9 +35,9 @@ func (m *ServerContext) Protocol() protocol.Client {
 	return m.ProtocolClient
 }
 
-// Blockchain returns the block chain client
-func (m *ServerContext) Blockchain() batch.BlockchainClient {
-	return m.BlockchainClient
+// Anchor returns anchor writer
+func (m *ServerContext) Anchor() batch.AnchorWriter {
+	return m.AnchorWriter
 }
 
 // OperationQueue returns the queue containing the pending operations
