@@ -143,6 +143,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 		Patches:                     []string{"replace", "add-public-keys", "remove-public-keys", "add-services", "remove-services", "ietf-json-patch"},
 		SignatureAlgorithms:         []string{"EdDSA", "ES256", "ES256K"},
 		KeyAlgorithms:               []string{"Ed25519", "P-256", "secp256k1"},
+		NonceSize:                   16,
 	}
 
 	parser := operationparser.New(latest)

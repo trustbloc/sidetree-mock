@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,8 +132,11 @@ var emptyJson = []byte("{}")
 // DIDSideSteps
 type DIDSideSteps struct {
 	createRequest *model.CreateRequest
+	reuseKeys     bool
 	recoveryKey   *ecdsa.PrivateKey
+	recoveryNonce string
 	updateKey     *ecdsa.PrivateKey
+	updateNonce   string
 	resp          *restclient.HttpRespone
 	bddContext    *BDDContext
 	alias         string
@@ -591,19 +595,25 @@ func (d *DIDSideSteps) getInitialState() (string, error) {
 }
 
 func (d *DIDSideSteps) getCreateRequest(doc []byte, patches []patch.Patch) ([]byte, error) {
-	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
+	recoveryNonce := d.generateNonce()
+
+	recoveryKey, recoveryCommitment, err := getKeyAndCommitment(recoveryNonce)
 	if err != nil {
 		return nil, err
 	}
 
 	d.recoveryKey = recoveryKey
+	d.recoveryNonce = recoveryNonce
 
-	updateKey, updateCommitment, err := generateKeyAndCommitment()
+	updateNonce := d.generateNonce()
+
+	updateKey, updateCommitment, err := getKeyAndCommitment(updateNonce)
 	if err != nil {
 		return nil, err
 	}
 
 	d.updateKey = updateKey
+	d.updateNonce = updateNonce
 
 	return client.NewCreateRequest(&client.CreateRequestInfo{
 		OpaqueDocument:     string(doc),
@@ -630,12 +640,26 @@ func (d *DIDSideSteps) getCreateRequestModel(doc []byte, patches []patch.Patch) 
 }
 
 func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniqueSuffix string) ([]byte, error) {
-	recoveryKey, recoveryCommitment, err := generateKeyAndCommitment()
+	recoveryKey, err := d.getRecoveryKey()
 	if err != nil {
 		return nil, err
 	}
 
-	updateKey, updateCommitment, err := generateKeyAndCommitment()
+	updateKey, err := d.getUpdateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	recoveryNonce := d.generateNonce()
+
+	recoveryCommitment, err := getCommitment(recoveryKey, recoveryNonce)
+	if err != nil {
+		return nil, err
+	}
+
+	updateNonce := d.generateNonce()
+
+	updateCommitment, err := getCommitment(updateKey, updateNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -645,6 +669,8 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniq
 	if err != nil {
 		return nil, err
 	}
+
+	recoveryPubKey.Nonce = d.recoveryNonce
 
 	revealValue, err := commitment.GetRevealValue(recoveryPubKey, sha2_256)
 	if err != nil {
@@ -667,11 +693,55 @@ func (d *DIDSideSteps) getRecoverRequest(doc []byte, patches []patch.Patch, uniq
 		return nil, err
 	}
 
-	// update recovery and update key for subsequent requests
-	d.recoveryKey = recoveryKey
-	d.updateKey = updateKey
+	if d.reuseKeys {
+		logger.Infof("setting recovery and update nonce")
+		d.recoveryNonce = recoveryNonce
+		d.updateNonce = updateNonce
+	} else {
+		logger.Infof("update recovery and update key for subsequent requests")
+		d.recoveryKey = recoveryKey
+		d.updateKey = updateKey
+	}
 
 	return recoverRequest, nil
+}
+
+func (d *DIDSideSteps) getUpdateKey() (*ecdsa.PrivateKey, error) {
+	if d.reuseKeys {
+		return d.updateKey, nil
+	}
+
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
+func (d *DIDSideSteps) getRecoveryKey() (*ecdsa.PrivateKey, error) {
+	if d.reuseKeys {
+		return d.recoveryKey, nil
+	}
+
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
+func (d *DIDSideSteps) generateNonce() string {
+	if d.reuseKeys {
+		nonceBytes := make([]byte, 16)
+		if _, err := rand.Read(nonceBytes); err != nil {
+			panic(err) // this should never happen
+		}
+
+		return encoder.EncodeToString(nonceBytes)
+	}
+
+	return ""
+}
+
+func (d *DIDSideSteps) setReuseKeys(flag string) error {
+	logger.Infof("setting reuse keys to '%s'", flag)
+
+	var err error
+	d.reuseKeys, err = strconv.ParseBool(flag)
+
+	return err
 }
 
 func (d *DIDSideSteps) getRecoverRequestModel(doc []byte, patches []patch.Patch, uniqueSuffix string) (model.RecoverRequest, error) {
@@ -714,6 +784,8 @@ func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 		return nil, err
 	}
 
+	recoveryPubKey.Nonce = d.recoveryNonce
+
 	revealValue, err := commitment.GetRevealValue(recoveryPubKey, sha2_256)
 	if err != nil {
 		return nil, err
@@ -728,7 +800,14 @@ func (d *DIDSideSteps) getDeactivateRequest(did string) ([]byte, error) {
 }
 
 func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]byte, error) {
-	updateKey, updateCommitment, err := generateKeyAndCommitment()
+	updateKey, err := d.getUpdateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	updateNonce := d.generateNonce()
+
+	updateCommitment, err := getCommitment(updateKey, updateNonce)
 	if err != nil {
 		return nil, err
 	}
@@ -738,6 +817,8 @@ func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]by
 	if err != nil {
 		return nil, err
 	}
+
+	updatePubKey.Nonce = d.updateNonce
 
 	revealValue, err := commitment.GetRevealValue(updatePubKey, sha2_256)
 	if err != nil {
@@ -758,8 +839,13 @@ func (d *DIDSideSteps) getUpdateRequest(did string, patches []patch.Patch) ([]by
 		return nil, err
 	}
 
-	// update update key for subsequent update requests
-	d.updateKey = updateKey
+	if d.reuseKeys {
+		logger.Infof("updating 'update' nonce")
+		d.updateNonce = updateNonce
+	} else {
+		logger.Infof("updating 'update' key for subsequent requests")
+		d.updateKey = updateKey
+	}
 
 	return req, nil
 }
@@ -779,23 +865,34 @@ func (d *DIDSideSteps) getUpdateRequestModel(did string, patches []patch.Patch) 
 	return req, nil
 }
 
-func generateKeyAndCommitment() (*ecdsa.PrivateKey, string, error) {
+func getKeyAndCommitment(nonce string) (*ecdsa.PrivateKey, string, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, "", err
 	}
 
-	pubKey, err := pubkey.GetPublicKeyJWK(&key.PublicKey)
-	if err != nil {
-		return nil, "", err
-	}
-
-	c, err := commitment.GetCommitment(pubKey, sha2_256)
+	c, err := getCommitment(key, nonce)
 	if err != nil {
 		return nil, "", err
 	}
 
 	return key, c, nil
+}
+
+func getCommitment(key *ecdsa.PrivateKey, nonce string) (string, error) {
+	pubKey, err := pubkey.GetPublicKeyJWK(&key.PublicKey)
+	if err != nil {
+		return "", err
+	}
+
+	pubKey.Nonce = nonce
+
+	c, err := commitment.GetCommitment(pubKey, sha2_256)
+	if err != nil {
+		return "", err
+	}
+
+	return c, nil
 }
 
 func getJSONPatch(path, value string) (patch.Patch, error) {
@@ -1258,6 +1355,7 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^success response matches resolution result "([^"]*)"$`, d.matchResolutionResult)
 	s.Step(`^error response matches resolution result "([^"]*)"$`, d.matchErrorResolutionResult)
 	s.Step(`^client sends interop resolve with initial value request$`, d.processInteropResolveWithInitialValue)
+	s.Step(`^client sets reuse keys for did operations to "([^"]*)"$`, d.setReuseKeys)
 	s.Step(`^we wait (\d+) seconds$`, wait)
 }
 
