@@ -119,5 +119,33 @@ Feature:
       When client sends request to update DID document with "request" error
       Then check error response contains "missing delta"
 
+  @reuse_keys_for_did_operations
+  Scenario: reuse keys for did operations
+    When client sets reuse keys for did operations to "true"
 
+    When client sends request to create DID document
+    Then check success response contains "#did"
+    Then we wait 1 seconds
 
+    When client sends request to add public key with ID "newKey" to DID document
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check success response contains "newKey"
+
+    When client sends request to recover DID document
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check success response contains "recoveryKey"
+
+    When client sends request to add public key with ID "newKey2" to DID document
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check success response contains "newKey2"
+
+    When client sends request to deactivate DID document
+    Then we wait 1 seconds
+    When client sends request to resolve DID document
+    Then check success response contains "deactivated"
+
+    # reset flag back to false for other tests
+    When client sets reuse keys for did operations to "false"
