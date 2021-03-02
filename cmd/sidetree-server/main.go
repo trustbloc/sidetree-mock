@@ -33,8 +33,8 @@ var config = viper.New()
 
 const defaultDIDDocNamespace = "did:sidetree"
 
-const operationPath = "/sidetree/0.0.1/operations"
-const resolutionPath = "/sidetree/0.0.1/identifiers"
+const operationPath = "/sidetree/v1/operations"
+const resolutionPath = "/sidetree/v1/identifiers"
 
 const arrayDelimiter = ","
 

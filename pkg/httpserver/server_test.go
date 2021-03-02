@@ -38,7 +38,7 @@ const (
 	clientURL = "http://" + url
 
 	didDocNamespace = "did:sidetree"
-	basePath        = "/sidetree/0.0.1"
+	basePath        = "/sidetree/v1"
 
 	sha2_256        = 18
 	sampleNamespace = "sample:sidetree"
