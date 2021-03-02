@@ -20,8 +20,8 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/hashing"
 	"github.com/trustbloc/sidetree-core-go/pkg/jws"
 	"github.com/trustbloc/sidetree-core-go/pkg/patch"
-	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
-	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/txnprovider/models"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/model"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/txnprovider/models"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
