@@ -27,8 +27,8 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/dochandler"
-	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/client"
-	"github.com/trustbloc/sidetree-core-go/pkg/versions/0_1/model"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/client"
+	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/model"
 
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 )
@@ -62,8 +62,8 @@ func TestServer_Start(t *testing.T) {
 		"",
 		"",
 		"tk1",
-		diddochandler.NewUpdateHandler(basePath, didDocHandler, pc),
-		diddochandler.NewResolveHandler(basePath, didDocHandler),
+		diddochandler.NewUpdateHandler(baseUpdatePath, didDocHandler, pc),
+		diddochandler.NewResolveHandler(baseResolvePath, didDocHandler),
 		newSampleUpdateHandler(sampleDocHandler, pc),
 		newSampleResolveHandler(sampleDocHandler),
 	)

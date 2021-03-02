@@ -32,7 +32,10 @@ var logger = logrus.New()
 var config = viper.New()
 
 const defaultDIDDocNamespace = "did:sidetree"
-const basePath = "/sidetree/0.0.1"
+
+const operationPath = "/sidetree/0.0.1/operations"
+const resolutionPath = "/sidetree/0.0.1/identifiers"
+
 const arrayDelimiter = ","
 
 func main() {
@@ -101,8 +104,8 @@ func main() {
 		config.GetString("tls.certificate"),
 		config.GetString("tls.key"),
 		config.GetString("api.token"),
-		diddochandler.NewUpdateHandler(basePath, didDocHandler, pc),
-		diddochandler.NewResolveHandler(basePath, didDocHandler),
+		diddochandler.NewUpdateHandler(operationPath, didDocHandler, pc),
+		diddochandler.NewResolveHandler(resolutionPath, didDocHandler),
 	)
 
 	if restSvc.Start() != nil {
