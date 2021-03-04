@@ -6,8 +6,8 @@
 
 
 # Release Parameters
-BASE_VERSION=0.1.6
-IS_RELEASE=false
+BASE_VERSION=0.6.0
+IS_RELEASE=true
 
 # Project Parameters
 SOURCE_REPO=sidetree-mock
