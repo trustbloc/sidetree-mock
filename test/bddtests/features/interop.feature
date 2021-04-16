@@ -10,6 +10,7 @@ Feature:
 
     @interop_longform_create_update_doc
     Scenario: interop test for create/update operations and long form DID resolution
+      When client discover endpoints
       When client sends "long-form-did" resolve request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
       Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/longFormResponseDidDocument.json"
 
@@ -28,6 +29,7 @@ Feature:
 
     @interop_create_recover_deactivate_doc
     Scenario: interop test for recover/deactivate operations
+      When client discover endpoints
       When client sends "create" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
       Then we wait 1 seconds
