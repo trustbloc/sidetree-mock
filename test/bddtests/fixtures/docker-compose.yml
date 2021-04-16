@@ -19,6 +19,8 @@ services:
       - SIDETREE_MOCK_DID_ALIASES=did:alias.com,did:domain.com
       - SIDETREE_MOCK_DID_METHOD_CONTEXT=
       - SIDETREE_MOCK_DID_BASE_ENABLED=true
+      - SIDETREE_MOCK_EXTERNAL_ENDPOINT=https://domain1.com
+      - SIDETREE_MOCK_WELLKNOWN_PATH=did
     ports:
       - 48326:48326
     volumes:

@@ -21,8 +21,10 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
+	restcommon "github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
 	sidetreecontext "github.com/trustbloc/sidetree-mock/pkg/context"
+	discoveryrest "github.com/trustbloc/sidetree-mock/pkg/discovery/endpoint/restapi"
 	"github.com/trustbloc/sidetree-mock/pkg/httpserver"
 	"github.com/trustbloc/sidetree-mock/pkg/mocks"
 	"github.com/trustbloc/sidetree-mock/pkg/observer"
@@ -99,13 +101,29 @@ func main() {
 		processor.New(didDocNamespace, opStore, pc),
 	)
 
+	// create discovery rest api
+	endpointDiscoveryOp := discoveryrest.New(&discoveryrest.Config{
+		ResolutionPath: resolutionPath,
+		OperationPath:  operationPath,
+		BaseURL:        config.GetString("external.endpoint"),
+		WellKnownPath:  config.GetString("wellknown.path"),
+	})
+
+	handlers := make([]restcommon.HTTPHandler, 0)
+
+	handlers = append(handlers,
+		diddochandler.NewUpdateHandler(operationPath, didDocHandler, pc),
+		diddochandler.NewResolveHandler(resolutionPath, didDocHandler))
+
+	handlers = append(handlers,
+		endpointDiscoveryOp.GetRESTHandlers()...)
+
 	restSvc := httpserver.New(
 		getListenURL(),
 		config.GetString("tls.certificate"),
 		config.GetString("tls.key"),
 		config.GetString("api.token"),
-		diddochandler.NewUpdateHandler(operationPath, didDocHandler, pc),
-		diddochandler.NewResolveHandler(resolutionPath, didDocHandler),
+		handlers...,
 	)
 
 	if restSvc.Start() != nil {

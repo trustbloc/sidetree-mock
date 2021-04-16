@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/client"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/model"
+	"github.com/trustbloc/sidetree-mock/pkg/discovery/endpoint/restapi"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -45,9 +47,6 @@ const (
 	didDocNamespace = "did:sidetree"
 
 	initialStateSeparator = ":"
-
-	testDocumentResolveURL = "https://localhost:48326/sidetree/v1/identifiers"
-	testDocumentUpdateURL  = "https://localhost:48326/sidetree/v1/operations"
 
 	sha2_256 = 18
 )
@@ -131,15 +130,17 @@ var emptyJson = []byte("{}")
 
 // DIDSideSteps
 type DIDSideSteps struct {
-	createRequest *model.CreateRequest
-	reuseKeys     bool
-	recoveryKey   *ecdsa.PrivateKey
-	recoveryNonce string
-	updateKey     *ecdsa.PrivateKey
-	updateNonce   string
-	resp          *restclient.HttpRespone
-	bddContext    *BDDContext
-	alias         string
+	createRequest      *model.CreateRequest
+	reuseKeys          bool
+	recoveryKey        *ecdsa.PrivateKey
+	recoveryNonce      string
+	updateKey          *ecdsa.PrivateKey
+	updateNonce        string
+	resp               *restclient.HttpRespone
+	bddContext         *BDDContext
+	alias              string
+	resolutionEndpoint string
+	operationEndpoint  string
 }
 
 // NewDIDSideSteps
@@ -162,7 +163,7 @@ func (d *DIDSideSteps) createDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, reqBytes)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, reqBytes)
 	if err == nil {
 		var req model.CreateRequest
 		e := json.Unmarshal(reqBytes, &req)
@@ -219,7 +220,7 @@ func (d *DIDSideSteps) createDIDDocumentWithError(errType string) error {
 
 	d.createRequest = req
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, bytes)
 	return err
 }
 
@@ -236,7 +237,7 @@ func (d *DIDSideSteps) updateDIDDocument(patches []patch.Patch) error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, req)
 	return err
 }
 
@@ -292,7 +293,7 @@ func (d *DIDSideSteps) updateDIDDocumentWithError(errType string) error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, bytes)
 	return err
 }
 
@@ -309,7 +310,7 @@ func (d *DIDSideSteps) deactivateDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, req)
 	return err
 }
 
@@ -331,7 +332,7 @@ func (d *DIDSideSteps) recoverDIDDocument() error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, req)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, req)
 	return err
 }
 
@@ -380,7 +381,7 @@ func (d *DIDSideSteps) recoverDIDDocumentWithError(errType string) error {
 		return err
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, bytes)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, bytes)
 	return err
 }
 
@@ -433,7 +434,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with id", didID)
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
+	d.resp, err = restclient.SendResolveRequest(d.resolutionEndpoint + "/" + didDocNamespace + docutil.NamespaceDelimiter + didID)
 	return err
 }
 
@@ -441,6 +442,47 @@ func (d *DIDSideSteps) checkErrorResp(errorMsg string) error {
 	if !strings.Contains(d.resp.ErrorMsg, errorMsg) {
 		return errors.Errorf("error resp %s doesn't contain %s", d.resp.ErrorMsg, errorMsg)
 	}
+	return nil
+}
+
+func (d *DIDSideSteps) discoverEndpoints() error {
+	resp, err := restclient.SendResolveRequest("https://localhost:48326/.well-known/did")
+	if err != nil {
+		return err
+	}
+
+	var w restapi.WellKnownResponse
+	if err := json.Unmarshal(resp.Payload, &w); err != nil {
+		return err
+	}
+
+	resp, err = restclient.SendResolveRequest(
+		fmt.Sprintf("https://localhost:48326/.well-known/webfinger?resource=%s",
+			url.PathEscape(w.ResolutionEndpoint)))
+	if err != nil {
+		return err
+	}
+
+	var webFingerResponse restapi.WebFingerResponse
+	if err := json.Unmarshal(resp.Payload, &webFingerResponse); err != nil {
+		return err
+	}
+
+	d.resolutionEndpoint = strings.ReplaceAll(webFingerResponse.Links[0].Href, "domain1.com", "localhost:48326")
+
+	resp, err = restclient.SendResolveRequest(
+		fmt.Sprintf("https://localhost:48326/.well-known/webfinger?resource=%s",
+			url.PathEscape(w.OperationEndpoint)))
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(resp.Payload, &webFingerResponse); err != nil {
+		return err
+	}
+
+	d.operationEndpoint = strings.ReplaceAll(webFingerResponse.Links[0].Href, "domain1.com", "localhost:48326")
+
 	return nil
 }
 
@@ -526,7 +568,7 @@ func (d *DIDSideSteps) resolveDIDDocument() error {
 	if err != nil {
 		return err
 	}
-	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + did)
+	d.resp, err = restclient.SendResolveRequest(d.resolutionEndpoint + "/" + did)
 	return err
 }
 
@@ -538,7 +580,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithAlias(alias string) error {
 
 	d.alias = alias
 
-	url := testDocumentResolveURL + "/" + did
+	url := d.resolutionEndpoint + "/" + did
 
 	d.resp, err = restclient.SendResolveRequest(url)
 	return err
@@ -555,7 +597,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValue() error {
 		return err
 	}
 
-	req := testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
+	req := d.resolutionEndpoint + "/" + did + initialStateSeparator + initialState
 
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
@@ -574,7 +616,7 @@ func (d *DIDSideSteps) resolveDIDDocumentWithInitialValueAndAlias(alias string) 
 		return err
 	}
 
-	req := testDocumentResolveURL + "/" + did + initialStateSeparator + initialState
+	req := d.resolutionEndpoint + "/" + did + initialStateSeparator + initialState
 
 	d.resp, err = restclient.SendResolveRequest(req)
 	return err
@@ -1029,7 +1071,7 @@ func (d *DIDSideSteps) processRequest(opType, path string) error {
 		d.createRequest = &req
 	}
 
-	d.resp, err = restclient.SendRequest(testDocumentUpdateURL, reqBytes)
+	d.resp, err = restclient.SendRequest(d.operationEndpoint, reqBytes)
 	return err
 }
 
@@ -1076,7 +1118,7 @@ func (d *DIDSideSteps) resolveRequest(reqType, path string) error {
 		return fmt.Errorf("request type `%s` not supported for test vectors", reqType)
 	}
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + req)
+	d.resp, err = restclient.SendResolveRequest(d.resolutionEndpoint + "/" + req)
 
 	return err
 }
@@ -1084,7 +1126,7 @@ func (d *DIDSideSteps) resolveRequest(reqType, path string) error {
 func (d *DIDSideSteps) processInteropResolveWithInitialValue() error {
 	var err error
 
-	d.resp, err = restclient.SendResolveRequest(testDocumentResolveURL + "/" + interopResolveDidWithInitialState)
+	d.resp, err = restclient.SendResolveRequest(d.resolutionEndpoint + "/" + interopResolveDidWithInitialState)
 	return err
 }
 
@@ -1331,6 +1373,7 @@ func prettyPrint(result *document.ResolutionResult) error {
 
 // RegisterSteps registers did sidetree steps
 func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
+	s.Step(`^client discover endpoints$`, d.discoverEndpoints)
 	s.Step(`^check error response contains "([^"]*)"$`, d.checkErrorResp)
 	s.Step(`^client sends request to create DID document$`, d.createDIDDocument)
 	s.Step(`^client sends request to create DID document with "([^"]*)" error$`, d.createDIDDocumentWithError)

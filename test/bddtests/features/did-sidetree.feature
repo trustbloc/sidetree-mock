@@ -10,6 +10,7 @@ Feature:
 
   @create_valid_did_doc
   Scenario: create valid did doc
+    When client discover endpoints
     When client sends request to create DID document
     Then check success response contains "#did"
     # retrieve document with initial value before it becomes available on the ledger
@@ -45,6 +46,7 @@ Feature:
 
   @create_deactivate_did_doc
   Scenario: deactivate valid did doc
+    When client discover endpoints
     When client sends request to create DID document
     Then check success response contains "#did"
     Then we wait 1 seconds
@@ -57,6 +59,7 @@ Feature:
 
   @create_recover_did_doc
   Scenario: recover did doc
+    When client discover endpoints
     When client sends request to create DID document
     Then check success response contains "#did"
     Then we wait 1 seconds
@@ -78,6 +81,7 @@ Feature:
 
     @create_add_remove_public_key
     Scenario: add and remove public keys
+      When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
       Then we wait 1 seconds
@@ -92,6 +96,7 @@ Feature:
 
     @create_add_remove_services
     Scenario: add and remove service endpoints
+      When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
       Then we wait 1 seconds
@@ -108,6 +113,7 @@ Feature:
 
     @update_doc_error
     Scenario: handle update document errors
+      When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
       Then we wait 1 seconds
@@ -121,6 +127,7 @@ Feature:
 
   @reuse_keys_for_did_operations
   Scenario: reuse keys for did operations
+    When client discover endpoints
     When client sets reuse keys for did operations to "true"
 
     When client sends request to create DID document
