@@ -16,11 +16,12 @@ services:
       - SIDETREE_MOCK_HOST=0.0.0.0
       - SIDETREE_MOCK_PORT=48326
       - SIDETREE_MOCK_DID_NAMESPACE=did:sidetree
-      - SIDETREE_MOCK_DID_ALIASES=did:alias.com,did:domain.com
+      - SIDETREE_MOCK_DID_ALIASES=did:sidetree:alias.com,did:sidetree:domain.com
       - SIDETREE_MOCK_DID_METHOD_CONTEXT=
       - SIDETREE_MOCK_DID_BASE_ENABLED=true
       - SIDETREE_MOCK_EXTERNAL_ENDPOINT=https://domain1.com
       - SIDETREE_MOCK_WELLKNOWN_PATH=did
+
     ports:
       - 48326:48326
     volumes:
