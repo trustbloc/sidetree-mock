@@ -104,7 +104,7 @@ func (m *MockProtocolClientProvider) WithMethodContext(ctx []string) *MockProtoc
 	return m
 }
 
-//WithBase enables @base property during document transformation
+// WithBase enables @base property during document transformation
 func (m *MockProtocolClientProvider) WithBase(enabled bool) *MockProtocolClientProvider {
 	m.baseEnabled = enabled
 
@@ -154,7 +154,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 	dc := doccomposer.New()
 	oa := operationapplier.New(latest, parser, dc)
 
-	dv := didvalidator.New(m.opStoreClient)
+	dv := didvalidator.New()
 	dt := didtransformer.New(didtransformer.WithMethodContext(m.methodCtx), didtransformer.WithBase(m.baseEnabled))
 
 	txnProcessor := txnprocessor.New(

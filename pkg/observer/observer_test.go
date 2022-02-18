@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 
 	"github.com/trustbloc/sidetree-core-go/pkg/api/operation"
 	"github.com/trustbloc/sidetree-core-go/pkg/api/txn"
@@ -91,9 +92,13 @@ type mockAnchorWriter struct {
 	readValue []*txn.SidetreeTxn
 }
 
-func (m mockAnchorWriter) WriteAnchor(anchor string, _ []*operation.Reference, _ uint64) error {
+func (m mockAnchorWriter) WriteAnchor(
+	anchor string,
+	artifacts []*protocol.AnchorDocument,
+	ops []*operation.Reference,
+	protocolGenesisTime uint64,
+) error {
 	return nil
-
 }
 
 func (m mockAnchorWriter) Read(sinceTransactionNumber int) (bool, *txn.SidetreeTxn) {
