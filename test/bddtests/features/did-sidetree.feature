@@ -18,9 +18,9 @@ Feature:
     Then check success response contains "#did"
     # retrieve document with initial value and alias before it becomes available on the ledger
     When client sends request to resolve DID document with initial state and with alias "did:sidetree:domain.com"
-    Then check success response contains "#aliasdid"
+    # Then check success response contains "#aliasdid"
     # we wait until observer poll sidetree txn from ledger
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "#did"
     When client sends request to resolve DID document with alias "did:sidetree:domain.com"
@@ -49,11 +49,11 @@ Feature:
     When client discover endpoints
     When client sends request to create DID document
     Then check success response contains "#did"
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "#did"
     When client sends request to deactivate DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "deactivated"
 
@@ -62,17 +62,17 @@ Feature:
     When client discover endpoints
     When client sends request to create DID document
     Then check success response contains "#did"
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "#did"
 
     When client sends request to recover DID document with "resolution" error
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "#emptydoc"
 
     When client sends request to recover DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "recoveryKey"
 
@@ -84,13 +84,13 @@ Feature:
       When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to add public key with ID "newKey" to DID document
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response contains "newKey"
       When client sends request to remove public key with ID "newKey" from DID document
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response does NOT contain "newKey"
 
@@ -99,13 +99,13 @@ Feature:
       When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to add service endpoint with ID "newService" to DID document
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response contains "newService"
       When client sends request to remove service endpoint with ID "newService" from DID document
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response does NOT contain "newService"
       When client sends request to update DID document with "request" error
@@ -116,9 +116,9 @@ Feature:
       When client discover endpoints
       When client sends request to create DID document
       Then check success response contains "#did"
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to update DID document with "resolution" error
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response contains "#did"
       Then check success response contains "createKey"
@@ -132,25 +132,25 @@ Feature:
 
     When client sends request to create DID document
     Then check success response contains "#did"
-    Then we wait 1 seconds
+    Then we wait 2 seconds
 
     When client sends request to add public key with ID "newKey" to DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "newKey"
 
     When client sends request to recover DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "recoveryKey"
 
     When client sends request to add public key with ID "newKey2" to DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "newKey2"
 
     When client sends request to deactivate DID document
-    Then we wait 1 seconds
+    Then we wait 2 seconds
     When client sends request to resolve DID document
     Then check success response contains "deactivated"
 

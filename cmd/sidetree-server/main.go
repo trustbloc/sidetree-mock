@@ -9,7 +9,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"os"
 	"os/signal"
 	"strings"
@@ -18,8 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
+	"github.com/trustbloc/sidetree-core-go/pkg/api/operation"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
+	"github.com/trustbloc/sidetree-core-go/pkg/document"
+	coremocks "github.com/trustbloc/sidetree-core-go/pkg/mocks"
 	"github.com/trustbloc/sidetree-core-go/pkg/processor"
 	restcommon "github.com/trustbloc/sidetree-core-go/pkg/restapi/common"
 	"github.com/trustbloc/sidetree-core-go/pkg/restapi/diddochandler"
@@ -99,6 +101,7 @@ func main() {
 		pc,
 		batchWriter,
 		processor.New(didDocNamespace, opStore, pc),
+		&coremocks.MetricsProvider{},
 	)
 
 	// create discovery rest api
@@ -112,8 +115,8 @@ func main() {
 	handlers := make([]restcommon.HTTPHandler, 0)
 
 	handlers = append(handlers,
-		diddochandler.NewUpdateHandler(operationPath, didDocHandler, pc),
-		diddochandler.NewResolveHandler(resolutionPath, didDocHandler))
+		diddochandler.NewUpdateHandler(operationPath, didDocHandler, pc, &coremocks.MetricsProvider{}),
+		diddochandler.NewResolveHandler(resolutionPath, &resolveWrapper{coreResolver: didDocHandler}, &coremocks.MetricsProvider{}))
 
 	handlers = append(handlers,
 		endpointDiscoveryOp.GetRESTHandlers()...)
@@ -154,4 +157,16 @@ func getListenURL() string {
 		panic("port is not set")
 	}
 	return fmt.Sprintf("%s:%d", host, port)
+}
+
+type resolveWrapper struct {
+	coreResolver coreResolver
+}
+
+func (rw *resolveWrapper) ResolveDocument(id string) (*document.ResolutionResult, error) {
+	return rw.coreResolver.ResolveDocument(id)
+}
+
+type coreResolver interface {
+	ResolveDocument(string, ...*operation.AnchoredOperation) (*document.ResolutionResult, error)
 }

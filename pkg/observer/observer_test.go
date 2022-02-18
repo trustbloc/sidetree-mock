@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package observer
 
 import (
+	"github.com/trustbloc/sidetree-core-go/pkg/api/protocol"
 	"sync"
 	"testing"
 	"time"
@@ -91,7 +92,11 @@ type mockAnchorWriter struct {
 	readValue []*txn.SidetreeTxn
 }
 
-func (m mockAnchorWriter) WriteAnchor(anchor string, _ []*operation.Reference, _ uint64) error {
+func (m mockAnchorWriter) WriteAnchor(
+	anchor string,
+	artifacts []*protocol.AnchorDocument,
+	ops []*operation.Reference,
+	protocolGenesisTime uint64) error {
 	return nil
 
 }
