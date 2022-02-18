@@ -62,8 +62,8 @@ func TestServer_Start(t *testing.T) {
 		"",
 		"",
 		"tk1",
-		diddochandler.NewUpdateHandler(baseUpdatePath, didDocHandler, pc),
-		diddochandler.NewResolveHandler(baseResolvePath, didDocHandler),
+		diddochandler.NewUpdateHandler(baseUpdatePath, didDocHandler, pc, &coremocks.MetricsProvider{}),
+		diddochandler.NewResolveHandler(baseResolvePath, didDocHandler, &coremocks.MetricsProvider{}),
 		newSampleUpdateHandler(sampleDocHandler, pc),
 		newSampleResolveHandler(sampleDocHandler),
 	)
@@ -215,7 +215,7 @@ type sampleUpdateHandler struct {
 
 func newSampleUpdateHandler(processor dochandler.Processor, pc protocol.Client) *sampleUpdateHandler {
 	return &sampleUpdateHandler{
-		UpdateHandler: dochandler.NewUpdateHandler(processor, pc),
+		UpdateHandler: dochandler.NewUpdateHandler(processor, pc, &coremocks.MetricsProvider{}),
 	}
 }
 
@@ -245,7 +245,7 @@ type sampleResolveHandler struct {
 
 func newSampleResolveHandler(resolver dochandler.Resolver) *sampleResolveHandler {
 	return &sampleResolveHandler{
-		ResolveHandler: dochandler.NewResolveHandler(resolver),
+		ResolveHandler: dochandler.NewResolveHandler(resolver, &coremocks.MetricsProvider{}),
 	}
 }
 
