@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/trustbloc/sidetree-core-go/pkg/api/operation"
 	"github.com/trustbloc/sidetree-core-go/pkg/batch"
 	"github.com/trustbloc/sidetree-core-go/pkg/dochandler"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
@@ -163,10 +162,10 @@ type resolveWrapper struct {
 	coreResolver coreResolver
 }
 
-func (rw *resolveWrapper) ResolveDocument(id string) (*document.ResolutionResult, error) {
-	return rw.coreResolver.ResolveDocument(id)
+func (rw *resolveWrapper) ResolveDocument(id string, opts ...document.ResolutionOption) (*document.ResolutionResult, error) {
+	return rw.coreResolver.ResolveDocument(id, opts...)
 }
 
 type coreResolver interface {
-	ResolveDocument(string, ...*operation.AnchoredOperation) (*document.ResolutionResult, error)
+	ResolveDocument(string, ...document.ResolutionOption) (*document.ResolutionResult, error)
 }

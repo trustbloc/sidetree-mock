@@ -99,6 +99,11 @@ const docTemplate = `{
 	   "serviceEndpoint": "https://openid.example.com/"
 	}, 
 	{
+	   "id": "oidc-2",
+	   "type": "OpenIdConnectVersion1.0Service",
+	   "serviceEndpoint": ["https://openid.example.com/", "https://openid.example-2.com/"]
+	}, 
+	{
 	   "id": "didcomm",
 	   "type": "did-communication",
 	   "serviceEndpoint": "https://hub.example.com/.identity/did:example:0123456789abcdef/",
@@ -107,14 +112,38 @@ const docTemplate = `{
 	   "priority": 0
 	},
     {
-      "id": "hub-object",
+      "id": "hub-1",
       "type": "IdentityHub",
       "serviceEndpoint": {
         "@context": "https://schema.identity.foundation/hub",
         "type": "UserHubEndpoint",
         "instances": ["did:example:456", "did:example:789"]
       }
-    }
+    },
+    {
+      "id": "hub-2",
+      "type": "IdentityHub",
+      "serviceEndpoint": [{
+        "uri": "https://example.com/path",
+        "routingKeys": ["did:example:somemediator#somekey"]
+	  }]
+	},
+    {
+      "id": "hub-3",
+      "type": "IdentityHub",
+      "serviceEndpoint": [{
+        "uri": "https://example.com/path",
+        "accept": [
+            "didcomm/v2",
+            "didcomm/aip2;env=rfc587"
+        ],
+        "routingKeys": ["did:example:somemediator#somekey"]
+	  },
+      {
+        "uri": "https://example-2.com/path",
+        "routingKeys": ["did:example:somemediator2#somekey2"]
+	  }]
+	}
   ]
 }`
 
