@@ -17,13 +17,13 @@ Feature:
       When client sends "create" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
       Then success response is validated against resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterCreate.json"
 
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterCreate.json"
 
       When client sends "update" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterUpdate.json"
 
@@ -32,22 +32,21 @@ Feature:
       When client discover endpoints
       When client sends "create" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response contains "#did"
 
       When client sends "recover" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterRecover.json"
 
       When client sends "deactivate" operation request from "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/generated.json"
 
-      Then we wait 1 seconds
+      Then we wait 2 seconds
       When client sends request to resolve DID document
       Then check success response contains "deactivated"
 
-      # TODO: Remove comment bellow when reference app adds "deactivate" flag to response
-      # Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterDeactivate.json"
+      Then success response matches resolution result "https://raw.githubusercontent.com/decentralized-identity/sidetree/master/tests/vectors/resolution/afterDeactivate.json"
 
