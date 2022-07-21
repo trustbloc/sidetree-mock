@@ -14,7 +14,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/trustbloc/sidetree-mock/test/bddtests/jsondiff"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -26,7 +25,6 @@ import (
 	"github.com/mr-tron/base58"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
 	"github.com/trustbloc/sidetree-core-go/pkg/canonicalizer"
 	"github.com/trustbloc/sidetree-core-go/pkg/commitment"
 	"github.com/trustbloc/sidetree-core-go/pkg/document"
@@ -38,7 +36,9 @@ import (
 	"github.com/trustbloc/sidetree-core-go/pkg/util/pubkey"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/client"
 	"github.com/trustbloc/sidetree-core-go/pkg/versions/1_0/model"
+
 	"github.com/trustbloc/sidetree-mock/pkg/discovery/endpoint/restapi"
+	"github.com/trustbloc/sidetree-mock/test/bddtests/jsondiff"
 	"github.com/trustbloc/sidetree-mock/test/bddtests/restclient"
 )
 
@@ -79,6 +79,7 @@ const addServicesTemplate = `[
 const removeServicesTemplate = `["%s"]`
 
 const docTemplate = `{
+  "alsoKnownAs": ["https://myblog.example/"],
   "publicKey": [
    {
      "id": "%s",

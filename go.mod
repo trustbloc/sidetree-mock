@@ -12,7 +12,7 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.7.0
 	github.com/trustbloc/edge-core v0.1.7
-	github.com/trustbloc/sidetree-core-go v1.0.0-rc2
+	github.com/trustbloc/sidetree-core-go v1.0.0-rc2.0.20220721143952-577302c8aca8
 )
 
 require (
