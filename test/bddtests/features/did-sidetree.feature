@@ -111,6 +111,17 @@ Feature:
       When client sends request to update DID document with "request" error
       Then check error response contains "missing delta"
 
+    @create_update_also_known_as
+    Scenario: update also known as
+      When client discover endpoints
+      When client sends request to create DID document
+      Then check success response contains "#did"
+      Then we wait 2 seconds
+      When client sends request to update DID document path "/alsoKnownAs" with value "different.com"
+      Then we wait 2 seconds
+      When client sends request to resolve DID document
+      Then check success response contains "different.com"
+
     @update_doc_error
     Scenario: handle update document errors
       When client discover endpoints

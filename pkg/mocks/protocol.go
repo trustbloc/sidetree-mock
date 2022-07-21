@@ -133,7 +133,7 @@ func (m *MockProtocolClientProvider) create() *MockProtocolClient {
 		MaxOperationCount:            1,    // one operation per batch - batch gets cut right away
 		MaxOperationSize:             2500, // has to be bigger than max delta + max proof + small number for type
 		MaxOperationHashLength:       100,
-		MaxDeltaSize:                 1700, // interop tests pass for 1000, our test is about 1100 since we have multiple public keys/services
+		MaxDeltaSize:                 1800, // interop tests pass for 1000, our test is about 1100 since we have multiple public keys/services
 		MaxCasURILength:              100,
 		CompressionAlgorithm:         "GZIP",
 		MaxChunkFileSize:             maxBatchFileSize,
