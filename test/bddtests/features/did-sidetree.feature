@@ -117,10 +117,28 @@ Feature:
       When client sends request to create DID document
       Then check success response contains "#did"
       Then we wait 2 seconds
-      When client sends request to update DID document path "/alsoKnownAs" with value "different.com"
+      # test removing non-existent URI - success
+      When client sends request to remove also known as URI "https://non-existent.com" from DID document
+      # test adding new URI
+      When client sends request to add also known as URI "newURI" to DID document
       Then we wait 2 seconds
       When client sends request to resolve DID document
-      Then check success response contains "different.com"
+      Then check success response contains "newURI"
+      # test removing URI
+      When client sends request to remove also known as URI "newURI" from DID document
+      Then we wait 2 seconds
+      When client sends request to resolve DID document
+      Then check success response does NOT contain "newURI"
+      # when we remove last also known as URI - there should be no 'alsoKnownAs' in the document
+      When client sends request to remove also known as URI "https://myblog.example/" from DID document
+      Then we wait 2 seconds
+      When client sends request to resolve DID document
+      Then check success response does NOT contain "alsoKnownAs"
+      # add new URI to DID document without any also known as URI
+      When client sends request to add also known as URI "newURI" to DID document
+      Then we wait 2 seconds
+      When client sends request to resolve DID document
+      Then check success response contains "newURI"
 
     @update_doc_error
     Scenario: handle update document errors
