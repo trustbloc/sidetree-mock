@@ -462,6 +462,24 @@ func (d *DIDSideSteps) removeServiceEndpointsFromDIDDocument(keyID string) error
 	return d.updateDIDDocument([]patch.Patch{p})
 }
 
+func (d *DIDSideSteps) addAlsoKnownAsURIToDIDDocument(uri string) error {
+	p, err := getAddAlsoKnownAsPatch(uri)
+	if err != nil {
+		return err
+	}
+
+	return d.updateDIDDocument([]patch.Patch{p})
+}
+
+func (d *DIDSideSteps) removeAlsoKnownAsURIFromDIDDocument(uri string) error {
+	p, err := getRemoveAlsoKnownAsPatch(uri)
+	if err != nil {
+		return err
+	}
+
+	return d.updateDIDDocument([]patch.Patch{p})
+}
+
 func (d *DIDSideSteps) resolveDIDDocumentWithID(didID string) error {
 	var err error
 	logger.Infof("resolve did document %s with id", didID)
@@ -531,6 +549,17 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 		return errors.Errorf("error resp %s", d.resp.ErrorMsg)
 	}
 
+	var result document.ResolutionResult
+	err := json.Unmarshal(d.resp.Payload, &result)
+	if err != nil {
+		return err
+	}
+
+	err = prettyPrint(&result)
+	if err != nil {
+		return err
+	}
+
 	if msg == "#did" || msg == "#aliasdid" || msg == "#emptydoc" {
 		ns := didDocNamespace
 		if msg == "#aliasdid" {
@@ -544,17 +573,6 @@ func (d *DIDSideSteps) checkSuccessResp(msg string, contains bool) error {
 
 		msg = strings.Replace(msg, "#did", did, -1)
 		msg = strings.Replace(msg, "#aliasdid", did, -1)
-
-		var result document.ResolutionResult
-		err = json.Unmarshal(d.resp.Payload, &result)
-		if err != nil {
-			return err
-		}
-
-		err = prettyPrint(&result)
-		if err != nil {
-			return err
-		}
 
 		didDoc := document.DidDocumentFromJSONLDObject(result.Document)
 
@@ -999,6 +1017,18 @@ func getRemoveServiceEndpointsPatch(keyID string) (patch.Patch, error) {
 	return patch.NewRemoveServiceEndpointsPatch(removeServices)
 }
 
+func getAddAlsoKnownAsPatch(uri string) (patch.Patch, error) {
+	addURIs := fmt.Sprintf(`["%s"]`, uri)
+	logger.Infof("creating add also known as patch: %s", uri)
+	return patch.NewAddAlsoKnownAs(addURIs)
+}
+
+func getRemoveAlsoKnownAsPatch(uri string) (patch.Patch, error) {
+	removeURIs := fmt.Sprintf(`["%s"]`, uri)
+	logger.Infof("creating remove also known as patch: %s", removeURIs)
+	return patch.NewRemoveAlsoKnownAs(removeURIs)
+}
+
 func (d *DIDSideSteps) getOpaqueDocument(keyID string) ([]byte, error) {
 	// create general + auth JWS verification key
 	jwsPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -1440,6 +1470,8 @@ func (d *DIDSideSteps) RegisterSteps(s *godog.Suite) {
 	s.Step(`^client sends request to remove public key with ID "([^"]*)" from DID document$`, d.removePublicKeyFromDIDDocument)
 	s.Step(`^client sends request to add service endpoint with ID "([^"]*)" to DID document$`, d.addServiceEndpointToDIDDocument)
 	s.Step(`^client sends request to remove service endpoint with ID "([^"]*)" from DID document$`, d.removeServiceEndpointsFromDIDDocument)
+	s.Step(`^client sends request to add also known as URI "([^"]*)" to DID document$`, d.addAlsoKnownAsURIToDIDDocument)
+	s.Step(`^client sends request to remove also known as URI "([^"]*)" from DID document$`, d.removeAlsoKnownAsURIFromDIDDocument)
 	s.Step(`^client sends request to update DID document with "([^"]*)" error$`, d.updateDIDDocumentWithError)
 	s.Step(`^client sends request to deactivate DID document$`, d.deactivateDIDDocument)
 	s.Step(`^client sends request to recover DID document$`, d.recoverDIDDocument)
