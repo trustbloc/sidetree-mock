@@ -19,7 +19,7 @@
 CONTAINER_IDS      = $(shell docker ps -a -q)
 DEV_IMAGES         = $(shell docker images dev-* -q)
 ARCH               = $(shell go env GOARCH)
-GO_VER             = 1.13.4
+GO_VER             = 1.19
 
 # Namespace for the sidetree mock node
 DOCKER_OUTPUT_NS          ?= ghcr.io/trustbloc
@@ -29,7 +29,7 @@ SIDETREE_MOCK_IMAGE_NAME  ?= sidetree-mock
 # Tool commands (overridable)
 DOCKER_CMD ?= docker
 GO_CMD     ?= go
-ALPINE_VER ?= 3.10
+ALPINE_VER ?= 3.15
 GO_TAGS    ?=
 
 export GO111MODULE=on
